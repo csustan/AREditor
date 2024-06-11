@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Augmented Reality Editor</title>
+
+    <style>
+        /* Set the font family to Arial or sans-serif */
+        body {
+            font-family: Arial, sans-serif;
+            /* Set the background color to a light gray */
+            background-color: #f0f0f0;
+            /* Set the text color to black */
+            color: black;
+        }
+
+        /* Styling the heading 1 element */
+        h1 {
+            /* Set the color of heading 1 to  */
+            color: black;
+        }
+
+        .instructions {
+            font-family: Consolas, "Courier New", Courier, monospace;
+            background-color: #f5f5f5;
+            color: #d63384;
+            /* Optional: Choose a color that fits your design */
+            padding: 2px 4px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            /* Optional: Add a border to distinguish it */
+        }
+
+        /* CSS Grid Rules */
+        .container {
+            display: grid;
+            grid-template-columns: 5% 90% 5%;
+            grid-template-rows: 5% 0.25fr 0.5fr .25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 5%;
+            gap: .15em 0px;
+            grid-auto-flow: row;
+            grid-template-areas:
+                "topSpacing topSpacing topSpacing"
+                "leftPading welcome rightPading"
+                "leftPading splash rightPading"
+                "leftPading instructionsHeader rightPading"
+                "leftPading instructions1A rightPading"
+                "leftPading instructions1B rightPading"
+                "leftPading instructions2A rightPading"
+                "leftPading instructions2B rightPading"
+                "leftPading instructions3A rightPading"
+                "leftPading instructions3B rightPading"
+                "leftPading spacer rightPading"
+                "leftPading outro rightPading"
+                "leftPading footer rightPading"
+                "bottomSpacing bottomSpacing bottomSpacing";
+        }
+
+        .welcome {
+            grid-area: welcome;
+            text-align: center;
+        }
+
+        .splash {
+            grid-area: splash;
+            text-align: center;
+        }
+
+        .instructionsHeader {
+            grid-area: instructionsHeader;
+        }
+
+        .instructions1A {
+            grid-area: instructions1A;
+        }
+
+        .instructions1B {
+            grid-area: instructions1B;
+        }
+
+        .instructions2A {
+            grid-area: instructions2A;
+        }
+
+        .instructions2B {
+            grid-area: instructions2B;
+        }
+
+        .instructions3A {
+            grid-area: instructions3A;
+        }
+
+        .instructions3B {
+            grid-area: instructions3B;
+        }
+
+        .spacer {
+            grid-area: spacer;
+        }
+
+        .outro {
+            grid-area: outro;
+            text-align: center;
+        }
+
+        .footer {
+            grid-area: footer;
+        }
+
+        .leftPading {
+            grid-area: leftPading;
+        }
+
+        .rightPading {
+            grid-area: rightPading;
+        }
+
+        .topSpacing {
+            grid-area: topSpacing;
+        }
+
+        .bottomSpacing {
+            grid-area: bottomSpacing;
+        }
+
+
+        /*end CSS Grid rules*/
+    </style>
+
+</head>
+
+<body>
+
+    <!-- Main content -->
+
+    <div class="container">
+        <div class="welcome">
+            <div style="text-align: center">
+                <h2> Augmented Reality Editor </h2>
+            </div>
+        </div>
+
+        <div class="splash">
+            <div style="padding-top: 10%; padding-bottom: 10%;">
+                <div>
+                    <h4>Welcome to the Augmented Reality Editor</h4>
+                </div>
+
+                <div style="text-align: center;">
+                    <a href="editor/index.html">>> Click Here to start editing << </a>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="instructionsHeader">
+            <br>
+            instructions:
+        </div>
+
+        <div class="instructions1A">
+            <b>First, set up the default AR Template:</b>
+        </div>
+
+        <div class="instructions1B" style="text-align: center;">
+
+            <table role="presentation">
+                <tr>
+                  <td></td>
+                  <td class="instructions" style="text-align: center;">
+                    File > New Default Template
+                </td>
+                  <td></td>
+                </tr>
+            </table>
+              
+        </div>
+
+        <div class="instructions2A">
+            <b>Next, import your .gltf object</b>
+        </div>
+
+        <div class="instructions2B">
+            <table role="presentation">
+                <tr>
+                  <td></td>
+                  <td class="instructions" style="text-align: center;">
+                    File > Import
+                </td>
+                  <td></td>
+                </tr>
+            </table>
+        
+        </div>
+
+        <div class="instructions3A">
+            <b>Lastly, export the AR Web App as a zip file by using</b>
+        </div>
+
+        <div class="instructions3B">
+
+            <table role="presentation">
+                <tr>
+                  <td></td>
+                  <td class="instructions" style="text-align: center;">
+                    File > Publish
+                </td>
+                  <td></td>
+                </tr>
+            </table>
+
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="outro">
+
+                    This application was built using the <a href="https://threejs.org/">ThreeJS Editor</a> and the <a
+                        href="https://ar-js-org.github.io/AR.js-Docs/">ARJS Library</a>
+
+        </div>
+
+        <div class="footer"></div>
+        <div class="leftPading"></div>
+        <div class="rightPading"></div>
+        <div class="topSpacing"></div>
+        <div class="bottomSpacing"></div>
+    </div>
+
+    <!-- End Main Content -->
+
+</body>
+
+</html>

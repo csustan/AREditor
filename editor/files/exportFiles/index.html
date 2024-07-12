@@ -111,6 +111,17 @@
                 }
                 var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
                 var address = protocol + window.location.host + window.location.pathname + '/ws';
+
+                if(window.location.pathname.substring(window.location.pathname.length -1) === '/' ){
+                    //windowLocationPathname.substring(0, windowLocationPathname.length -1);
+                    address = protocol + window.location.host + window.location.pathname + 'ws';
+                } else {
+                    address = protocol + window.location.host + window.location.pathname + '/ws'
+                }
+
+                console.log("address (should end in /ws): "); //test code
+                console.dir(address); //test code
+                
                 var socket = new WebSocket(address);
                 socket.onmessage = function (msg) {
                     if (msg.data == 'reload') window.location.reload();

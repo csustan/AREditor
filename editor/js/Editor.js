@@ -6,6 +6,7 @@ import { History as _History } from './History.js';
 import { Strings } from './Strings.js';
 import { Storage as _Storage } from './Storage.js';
 import { Selector } from './Viewport.Selector.js';
+//import { AddObjectCommand } from './commands/AddObjectCommand.js'; //this was needed before the default template was loaded in the Menubar.File.js
 
 var _DEFAULT_CAMERA = new THREE.PerspectiveCamera( 50, 1, 0.01, 1000 );
 _DEFAULT_CAMERA.name = 'Camera';
@@ -607,7 +608,7 @@ Editor.prototype = {
 	},
 
 	//The clear function which is also used when the file > new menue is used
-	clear: function (optionalIsNewFlag) {
+	clear: function () { //erly adaptation used a boolean called "optionalIsNewFlag" which is no longer needed since the default template is now loaded at the Menbar.File.js
 
 		this.history.clear();
 		this.storage.clear();
@@ -649,11 +650,14 @@ Editor.prototype = {
 		editor.execute( new AddObjectCommand( editor, mesh ) );
 		*/
 
-
+			//commentning out the following section -- the default template is now loaded in
+			//Menubar.File.js. Delete this section later.
+		/*
 		if( optionalIsNewFlag ){ //If True is passed into this Clear function, then it's time to build the template.
 	
 		//if(this.scene.getObjectByName('DefaultMarkerPlaneForScale')  == undefined) {}
 		//in the Clear option, this will always be true. Disabling code.
+	
 		
 			const markerPlaneGeometry = new THREE.PlaneGeometry(1, 1);
 	
@@ -676,7 +680,11 @@ Editor.prototype = {
 			// Rotate the plane to make it face up (parallel to the ground)
 			markerPlane.rotation.x = -Math.PI / 2;
 			
+			//	editor.execute( new AddObjectCommand( editor, mesh ) );
 			this.scene.add(markerPlane);
+			//editor.execute( new AddObjectCommand( editor, markerPlane ) );
+
+
 
 			//Add all the lights
 			//Set up light so the WebGL rendered objects will be visible
@@ -687,12 +695,14 @@ Editor.prototype = {
 		defaultAmbientLight1.name = "Default Ambient Light 1";
 
 		//Add the light to the scene so it will exisit in the same space as the rendered objects
-		this.scene.add( defaultAmbientLight1 );
+		//this.scene.add( defaultAmbientLight1 );
+		editor.execute( new AddObjectCommand( editor, defaultAmbientLight1 ) );
 		
     	const defaultAmbientLight2 = new THREE.AmbientLight(0xffffff, 0.25);
 		defaultAmbientLight2.name = "Default Ambient Light 2";
         // Add the ambient light to the scene
-        this.scene.add(defaultAmbientLight2);
+        //this.scene.add(defaultAmbientLight2);
+		editor.execute( new AddObjectCommand( editor, defaultAmbientLight2 ) );
 
         // Create a new directional light to simulate sunlight
         // Parameters:
@@ -708,11 +718,11 @@ Editor.prototype = {
         defaultDirectionalLight1.position.set(1, 1, 1).normalize();
 
         // Add the direcyional light to the scene
-        this.scene.add(defaultDirectionalLight1);
-
-
+        //this.scene.add(defaultDirectionalLight1);
+		editor.execute( new AddObjectCommand( editor, defaultDirectionalLight1 ) );
+		
 		};
-
+		*/
 		
 
 		this.deselect();

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 import { zipSync, strToU8, ZipPassThrough } from 'three/addons/libs/fflate.module.js';// use Uint8Array(content); for the binary camera_para.dat file
-
+import { AddObjectCommand } from './commands/AddObjectCommand.js'; //needed for creating the objects in the default template
 //For now, import on the index.html
 ////import * as JSZip from './libs/jszip.js' //'../examples/jsm/libs/jszip.js'; // replacing fflate.module.js with JSZip since fflate doesn't support binary files, like the camera_para.dat
 //import JSZip from './libs/jszip.js' ; 
@@ -37,7 +37,67 @@ function MenubarFile(editor) {
 
 		if (confirm('Any unsaved data will be lost, and the Default Template will be loaded. Are you sure?')) {
 
-			editor.clear(true); //flaging that this is a New rather than a Clear
+			editor.clear(); //flaging that this is a New rather than a Clear //removing the flag and moving the scene objects/light generation to this function
+
+			const markerPlaneGeometry = new THREE.PlaneGeometry(1, 1);
+	
+			// Load the image texture
+			const markerTextureLoader = new THREE.TextureLoader();
+			const markerTexture = markerTextureLoader.load('files/markerForScale.png');
+			
+			// Create a material with the image texture
+			const markerMaterial = new THREE.MeshBasicMaterial({ map: markerTexture });
+	
+			// Create a mesh using the plane geometry and material
+			const markerPlane = new THREE.Mesh(markerPlaneGeometry, markerMaterial);
+			
+			//Add a "isPreloaded" tag to filter tag the mesh to be filtered out at export
+			//markerPlane.isPreloaded = true;
+	
+			//Name the plane something that can be tracked:
+			markerPlane.name = "DefaultMarkerPlaneForScale"
+	
+			// Rotate the plane to make it face up (parallel to the ground)
+			markerPlane.rotation.x = -Math.PI / 2;
+			
+			//	editor.execute( new AddObjectCommand( editor, mesh ) );
+			//this.scene.add(markerPlane);
+			editor.execute( new AddObjectCommand( editor, markerPlane ) );
+
+			//Add all the lights
+			//Set up light so the WebGL rendered objects will be visible
+		//Gnerarate the light.
+		//in this case, an ambient liight with the color set to Gray80  (hex code CC CC CC), and a mid-level intensity -- 50%
+		const defaultAmbientLight1 = new THREE.AmbientLight( 0xcccccc, .25 );
+		//Name the light:
+		defaultAmbientLight1.name = "Default Ambient Light 1";
+
+		//Add the light to the scene so it will exisit in the same space as the rendered objects
+		//this.scene.add( defaultAmbientLight1 );
+		editor.execute( new AddObjectCommand( editor, defaultAmbientLight1 ) );
+		
+    	const defaultAmbientLight2 = new THREE.AmbientLight(0xffffff, 0.25);
+		defaultAmbientLight2.name = "Default Ambient Light 2";
+        // Add the ambient light to the scene
+        //this.scene.add(defaultAmbientLight2);
+		editor.execute( new AddObjectCommand( editor, defaultAmbientLight2 ) );
+
+        // Create a new directional light to simulate sunlight
+        // Parameters:
+        // - color: The color of the light
+        // - intensity: The strength of the light
+
+        const defaultDirectionalLight1 = new THREE.DirectionalLight(0xffffff, .25);
+
+		//Name the default directional light:
+		defaultDirectionalLight1.name = "Default Directional Light 1"
+
+        // Set the direction of the light
+        defaultDirectionalLight1.position.set(1, 1, 1).normalize();
+
+        // Add the direcyional light to the scene
+        //this.scene.add(defaultDirectionalLight1);
+		editor.execute( new AddObjectCommand( editor, defaultDirectionalLight1 ) );
 
 		}
 

@@ -188,7 +188,10 @@ var APP = {
             //*/
 
             //Loading code:
-            //*
+            
+            //Now that the scene is loaded with globalVar.markerRoot.add(loadedScene);, the children no longer need be loaded in 
+            //by using a loop
+            /* 
             // Loop through the children of the loaded scene and add specific types or names to markerGroup
             loadedScene.children.forEach(function (child) {
                 // Example: Add only objects with the name "model" to markerGroup
@@ -211,18 +214,30 @@ var APP = {
                 console.log("Current Child Group content:");  //Test Code
                 console.dir(childGroup);  //Test Code
 
-                //markerRoot.add(child);
-                //scene.add(child);
-                globalVar.markerRoot.add(child);
+                //markerRoot.add(child); //replaced with the globalVar.markerRoot
+                //scene.add(child); //test code
+                //Disabling the globalVar.markerRoot.add(child); code -- building more advanced structures in the AREditor results in multiple locations for geomatries/gltf imports/etc.
+                //This will be replaced outside the loop with a globalVar.markerRoot.add(loadedScene);
+                //globalVar.markerRoot.add(child);
 
             });
+            */
 
-            //Add the entire childGroup to the markerGroup:
-            //globalVar.markerRoot.add(childGroup); // no longer needed
+            // //Add the entire childGroup to the markerGroup:
+            // //globalVar.markerRoot.add(childGroup); // no longer needed
             
+            //Now that we are no longer loading indvidual children, we will need to load the entire scene
+            //After disabling the globalVar.markerRoot.add(child); adding the entire scene
+            //console.log("loadedScene: "); //Test Code
+            //console.dir(loadedScene); //Test Code
+            //console.log("loadedScene?.scene: "); //Test Code
+            //console.dir(loadedScene?.scene); //Test Code
+            globalVar.markerRoot.add(loadedScene);
+
+
             //test code:
-            console.log("globalVar.markerRoot");
-            console.dir(globalVar.markerRoot);
+            console.log("globalVar.markerRoot"); //test code
+            console.dir(globalVar.markerRoot); //test code
 
             // Check if there is a camera in the loaded scene
             var cameras = loadedScene.cameras;

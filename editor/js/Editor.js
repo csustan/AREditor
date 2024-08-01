@@ -10,7 +10,7 @@ import { Selector } from './Viewport.Selector.js';
 
 var _DEFAULT_CAMERA = new THREE.PerspectiveCamera( 50, 1, 0.01, 1000 );
 _DEFAULT_CAMERA.name = 'Camera';
-_DEFAULT_CAMERA.position.set( 0, 5, 10 );
+_DEFAULT_CAMERA.position.set( 0, 3, 2 ); //Default Camera position, originally 0,5,10 -- which is zoomed too far out.
 _DEFAULT_CAMERA.lookAt( new THREE.Vector3() );
 
 function Editor() {
@@ -535,6 +535,7 @@ Editor.prototype = {
 	},
 
 	setViewportCamera: function ( uuid ) {
+		console.log("setViewportCameraCalled"); //test code
 
 		this.viewportCamera = this.cameras[ uuid ];
 		this.signals.viewportCameraChanged.dispatch();

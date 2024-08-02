@@ -71,15 +71,7 @@
 			"layers": 1,
 			"matrix": [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
 			"children": [
-				{
-					"uuid": "05B57416-1BE5-4A96-BB05-9D9CD112D52B",
-					"type": "Mesh",
-					"name": "Ground",
-					"layers": 1,
-					"matrix": [1,0,0,0,0,0.000796,-1,0,0,1,0.000796,0,0,-0.5,0,1],
-					"geometry": "C3C0CE7D-10B8-43FC-8F74-011CC6E57800",
-					"material": "3A9449D2-62DB-4BB4-ABBD-6F3F9D46DE1A"
-				},
+				
 				{
 					"uuid": "0A3CB873-07E6-4EEB-830B-68192504111B",
 					"type": "Sprite",

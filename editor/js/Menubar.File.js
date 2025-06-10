@@ -40,64 +40,64 @@ function MenubarFile(editor) {
 			editor.clear(); //flaging that this is a New rather than a Clear //removing the flag and moving the scene objects/light generation to this function
 
 			const markerPlaneGeometry = new THREE.PlaneGeometry(1, 1);
-	
+
 			// Load the image texture
 			const markerTextureLoader = new THREE.TextureLoader();
 			const markerTexture = markerTextureLoader.load('files/markerForScale.png');
-			
+
 			// Create a material with the image texture
 			const markerMaterial = new THREE.MeshBasicMaterial({ map: markerTexture });
-	
+
 			// Create a mesh using the plane geometry and material
 			const markerPlane = new THREE.Mesh(markerPlaneGeometry, markerMaterial);
-			
+
 			//Add a "isPreloaded" tag to filter tag the mesh to be filtered out at export
 			//markerPlane.isPreloaded = true;
-	
+
 			//Name the plane something that can be tracked:
 			markerPlane.name = "DefaultMarkerPlaneForScale"
-	
+
 			// Rotate the plane to make it face up (parallel to the ground)
 			markerPlane.rotation.x = -Math.PI / 2;
-			
+
 			//	editor.execute( new AddObjectCommand( editor, mesh ) );
 			//this.scene.add(markerPlane);
-			editor.execute( new AddObjectCommand( editor, markerPlane ) );
+			editor.execute(new AddObjectCommand(editor, markerPlane));
 
 			//Add all the lights
 			//Set up light so the WebGL rendered objects will be visible
-		//Gnerarate the light.
-		//in this case, an ambient liight with the color set to Gray80  (hex code CC CC CC), and a mid-level intensity -- 50%
-		const defaultAmbientLight1 = new THREE.AmbientLight( 0xcccccc, .25 );
-		//Name the light:
-		defaultAmbientLight1.name = "Default Ambient Light 1";
+			//Gnerarate the light.
+			//in this case, an ambient liight with the color set to Gray80  (hex code CC CC CC), and a mid-level intensity -- 50%
+			const defaultAmbientLight1 = new THREE.AmbientLight(0xcccccc, .25);
+			//Name the light:
+			defaultAmbientLight1.name = "Default Ambient Light 1";
 
-		//Add the light to the scene so it will exisit in the same space as the rendered objects
-		//this.scene.add( defaultAmbientLight1 );
-		editor.execute( new AddObjectCommand( editor, defaultAmbientLight1 ) );
-		
-    	const defaultAmbientLight2 = new THREE.AmbientLight(0xffffff, 0.25);
-		defaultAmbientLight2.name = "Default Ambient Light 2";
-        // Add the ambient light to the scene
-        //this.scene.add(defaultAmbientLight2);
-		editor.execute( new AddObjectCommand( editor, defaultAmbientLight2 ) );
+			//Add the light to the scene so it will exisit in the same space as the rendered objects
+			//this.scene.add( defaultAmbientLight1 );
+			editor.execute(new AddObjectCommand(editor, defaultAmbientLight1));
 
-        // Create a new directional light to simulate sunlight
-        // Parameters:
-        // - color: The color of the light
-        // - intensity: The strength of the light
+			const defaultAmbientLight2 = new THREE.AmbientLight(0xffffff, 0.25);
+			defaultAmbientLight2.name = "Default Ambient Light 2";
+			// Add the ambient light to the scene
+			//this.scene.add(defaultAmbientLight2);
+			editor.execute(new AddObjectCommand(editor, defaultAmbientLight2));
 
-        const defaultDirectionalLight1 = new THREE.DirectionalLight(0xffffff, .25);
+			// Create a new directional light to simulate sunlight
+			// Parameters:
+			// - color: The color of the light
+			// - intensity: The strength of the light
 
-		//Name the default directional light:
-		defaultDirectionalLight1.name = "Default Directional Light 1"
+			const defaultDirectionalLight1 = new THREE.DirectionalLight(0xffffff, .25);
 
-        // Set the direction of the light
-        defaultDirectionalLight1.position.set(1, 1, 1).normalize();
+			//Name the default directional light:
+			defaultDirectionalLight1.name = "Default Directional Light 1"
 
-        // Add the direcyional light to the scene
-        //this.scene.add(defaultDirectionalLight1);
-		editor.execute( new AddObjectCommand( editor, defaultDirectionalLight1 ) );
+			// Set the direction of the light
+			defaultDirectionalLight1.position.set(1, 1, 1).normalize();
+
+			// Add the direcyional light to the scene
+			//this.scene.add(defaultDirectionalLight1);
+			editor.execute(new AddObjectCommand(editor, defaultDirectionalLight1));
 
 		}
 
@@ -344,15 +344,48 @@ function MenubarFile(editor) {
 		//Start test code
 		// Get the current script element
 		// Get the current script element
+
+		//document.currentScript is not reliable. It can return null, especially when the code is asynchronously executed or the script is dynamically imported.
+		//Replace:
+		//const scriptElement = document.currentScript;
+		//
+		//// Get the source attribute of the script element
+		//const scriptSource = scriptElement.getAttribute('src');
+		//
+		//// Get the directory of the script by extracting the path
+		//const scriptDirectory = scriptSource.substring(0, scriptSource.lastIndexOf('/'));
+		//
+		//console.log('Script directory:', scriptDirectory);
+
+		//With this defensive version:
+
+		// Attempt to retrieve the currently executing <script> element.
+		// This works in synchronous, non-module script execution contexts.
 		const scriptElement = document.currentScript;
 
-		// Get the source attribute of the script element
-		const scriptSource = scriptElement.getAttribute('src');
+		// Check if the script element was found.
+		if (scriptElement) {
 
-		// Get the directory of the script by extracting the path
-		const scriptDirectory = scriptSource.substring(0, scriptSource.lastIndexOf('/'));
+			// Get the value of the "src" attribute from the script tag.
+			// This is the full path to the JS file (e.g., "js/Menubar.File.js").
+			const scriptSource = scriptElement.getAttribute('src');
 
-		console.log('Script directory:', scriptDirectory);
+			// Extract the directory portion of the script's path.
+			// For example, if scriptSource is "js/Menubar.File.js", this gives "js".
+			const scriptDirectory = scriptSource.substring(0, scriptSource.lastIndexOf('/'));
+
+			// Output the directory to the console for debugging or logging purposes.
+			console.log('Script directory:', scriptDirectory);
+
+		} else {
+
+			// If document.currentScript returned null, log a warning.
+			// This typically happens when the code is running asynchronously or in a module context.
+			console.warn('Unable to determine script directory: document.currentScript is null.');
+
+		}
+
+
 		//End test code
 
 		const exporter = new GLTFExporter();
@@ -485,11 +518,11 @@ function MenubarFile(editor) {
 	
 		options.add( new UIHorizontalRule() );
 		//*/ //End diabling of file menu options
-	// Publish
+	//Start Publish AR App
 	//Edited to export as an ARJS Template
 	option = new UIRow();
 	option.setClass('option');
-	option.setTextContent(strings.getKey('menubar/file/publish'));
+	option.setTextContent(strings.getKey('menubar/file/publish_ar'));
 	option.onClick(function () {
 
 		//Setup a storage location for the index.html and the json.app file content
@@ -512,7 +545,7 @@ function MenubarFile(editor) {
 
 		//This is the process for the "publish" zip
 		//const loader = new THREE.FileLoader(manager); no longer using the THREE.LoadingManager with THREE.FileLoader
-		const loader = new THREE.FileLoader(); 
+		const loader = new THREE.FileLoader();
 
 		//loader.load('js/libs/app/index.html', function (content) {
 		loader.load('../editor/files/exportFiles/index.html', function (content) {
@@ -543,29 +576,29 @@ function MenubarFile(editor) {
 			//toZip['index.html'] = strToU8(content);
 			toZip['index.html'] = content;
 
-		});	
+		});
 
-		
+
 		//Building a JSZip
-//Test that JZZip Loaded:
-// Function to probe the JSZip library
-function probeJSZip() {
-	if (typeof JSZip !== 'undefined') {
-		console.log('JSZip is defined.');
-		console.log('Type of JSZip:', typeof JSZip);
-		try {
-			var zip = new JSZip();
-			console.log('JSZip instance created successfully:', zip);
-		} catch (error) {
-			console.error('Error creating JSZip instance:', error);
+		//Test that JZZip Loaded:
+		// Function to probe the JSZip library
+		function probeJSZip() {
+			if (typeof JSZip !== 'undefined') {
+				console.log('JSZip is defined.');
+				console.log('Type of JSZip:', typeof JSZip);
+				try {
+					var zip = new JSZip();
+					console.log('JSZip instance created successfully:', zip);
+				} catch (error) {
+					console.error('Error creating JSZip instance:', error);
+				}
+			} else {
+				console.error('JSZip is not defined.');
+			}
 		}
-	} else {
-		console.error('JSZip is not defined.');
-	}
-}
 
-// Run the probe function
-probeJSZip();
+		// Run the probe function
+		probeJSZip();
 
 		// Create a new JSZip instance
 		var zip = new JSZip();
@@ -680,263 +713,543 @@ probeJSZip();
 		* 
 		* @version 1.0.0
 		*/
+
+		/**
+		 * Fetches data from the specified URL and handles it accordingly.
+		 * @param {string} url - The URL from which to fetch the data.
+		 * @returns {Promise<Blob|ArrayBuffer>} A promise that resolves with the fetched data as a Blob or ArrayBuffer.
+		 */
+		function fetchData(url) {
+			return fetch(url)
+				.then(function (response) {
+					if (response.ok) {
+						if (response.headers.get('Content-Type').startsWith('application/octet-stream')) {
+							// Handle binary data
+							return response.arrayBuffer();
+						} else {
+							// Handle other types of files
+							return response.blob();
+						}
+					} else {
+						throw new Error('Network response was not ok: ' + response.status + ' ' + response.statusText);
+					}
+				});
+		}
+
+
+		/**
+		 * Fetches multiple files from the specified URLs and returns a promise that resolves with an array of fetched data.
+		 * @param {Object[]} files - An array of objects containing the URL, the desired file name, and the directory path.
+		 * @returns {Promise<Array<{name: string, path: string, data: Blob|ArrayBuffer}>>} A promise that resolves with an array of fetched data.
+		 */
+		function fetchFiles(files) {
+			return Promise.all(files.map(function (file) {
+				return fetchData(file.url).then(function (data) {
+					return { name: file.name, path: file.path, data: data };
+				});
+			}));
+		}
+
+		/**
+		 * Fetches multiple files from the specified URLs, organizes them into directories, and creates a ZIP file.
+		 * @param {Object[]} filesToFetch - An array of objects containing file information (URL, name, and path).
+		 * @returns {Promise<Blob>} A promise that resolves with the generated ZIP file as a Blob.
+		 */
+		function createZip(filesToFetch) {
+			if (!Array.isArray(filesToFetch) || filesToFetch.length === 0) {
+				return Promise.reject(new Error('Invalid filesToFetch parameter. It should be a non-empty array.'));
+			}
+
+			var zip = new JSZip();
+
+			return fetchFiles(filesToFetch)
+				.then(function (dataArray) {
+					dataArray.forEach(function (file) {
+						var directoryPath = file.path.trim();
+						if (directoryPath !== '') {
+							var directory = zip.folder(directoryPath);
+						}
+						console.log("directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' }: "); //Test code
+						console.log("directoryPath + file.name: " + directoryPath + file.name); //Test code
+						console.log("file.data" + file.data); //Test code
+						console.log("binary: " + (typeof file.data !== 'string')); //Test code
+
+						zip.file(directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' });
+					});
+
+					//In this case, we need to inject the generated app.json
+					//This should be abstracted out to be a function call's return.
+					console.log("toZip['app.json']"); //Test code
+					console.dir(toZip['app.json']); //Test code
+
+					zip.file("app.json", toZip['app.json'], { binary: false });
+
+					//Additionally, the index.html page needed to be adjusted, so it must be added seperatly
+					console.log("toZip['index.html']"); //Test code
+					console.dir(toZip['index.html']); //Test code
+
+					zip.file("index.html", toZip['index.html'], { binary: false });
+					
+
+					//Return the completed zip content.
+					return zip.generateAsync({ type: 'blob' });
+				})
+				.catch(function (error) {
+					// Throw error to be handled by the caller
+					throw new Error('Error creating ZIP file: ' + error.message);
+				});
+		}
+
+		/*
+		// Usage example:
+		var filesToFetch = [
+			{ url: 'https://example.com/index.html', name: 'index.html', path: '' },
+			{ url: 'https://example.com/banner.jpg', name: 'banner.jpg', path: '' },
+			{ url: 'https://example.com/index.js', name: 'index.js', path: '' },
+			{ url: 'https://example.com/binaryfile1', name: 'binaryfile1.bin', path: 'binaries/' },
+			{ url: 'https://example.com/binaryfile2', name: 'binaryfile2.bin', path: 'binaries/' },
+			{ url: 'https://example.com/binaryfile3', name: 'binaryfile3.bin', path: 'binaries/' }
+		];
+		*/
+
+		/*
+		var directoryStructure = {
+			//root Directory
+			//"app.json": null, //new ArrayBuffer( file data goes here),
+			//"index.html": new ArrayBuffer( file data here ),
+			"newindex.html": '../editor/files/exportFiles/index.html',
+			"data": { //directory - data
+				"largeLambda.patt": '../editor/files/exportFiles/data/largeLambda.patt'
+			},
+			"img": { //directory - img
+				"favicon.ico": '../editor/files/exportFiles/img/favicon.ico'
+			},
+			"js": { //directory - js
+				"APP.js": '../editor/files/exportFiles/js/APP.js',
+				"GLTFLoader.js": '../editor/files/exportFiles/js/GLTFLoader.js',
+				"LegacyJSONLoader.js": '../editor/files/exportFiles/js/LegacyJSONLoader.js',
+				"OrbitControls.js": '../editor/files/exportFiles/js/OrbitControls.js',
+				"VRButton.js": '../editor/files/exportFiles/js/VRButton.js',
+				"ar-threex.js": '../editor/files/exportFiles/js/ar-threex.js',
+				"ar.js": '../editor/files/exportFiles/js/ar.js',
+				"es-module-shims.js": '../editor/files/exportFiles/js/es-module-shims.js',
+				"stats.min.js": '../editor/files/exportFiles/js/stats.min.js',
+				"three.js": '../editor/files/exportFiles/js/three.js',
+				"three.module.js": '../editor/files/exportFiles/js/three.module.js',
+				"jsartoolkit5": {
+					//js subdirectory - jsartoolkit5
+					"artoolkit.api.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.d.ts',
+					"artoolkit.api.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.js',
+					"artoolkit.min.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.min.js',
+					"artoolkit.three.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.d.ts',
+					"artoolkit.three.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.js',
+					"artoolkit.worker.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.worker.js',
+					"index.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/index.d.ts',
+					"index.js": '../editor/files/exportFiles/js/jsartoolkit5/index.js'
+				},
+				"data": {
+					//js subdirectory - data
+					"camera_para.dat": '../editor/files/exportFiles/js/data/camera_para.dat',
+					"lambda-old.patt": '../editor/files/exportFiles/js/data/lambda-old.patt',
+					"lambda.patt": '../editor/files/exportFiles/js/data/lambda.patt'
+				}
+			},
+			"resources": { //directory - resources
+				"images": {
+					//resources subdirectory - images
+					"Large Lambda AR Marker.png": '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png'
+				}
+			}
+		};
+		*/
+
+
+		/*
+		// Recursively processes the directory structure to generate the file array.
+		//@param {Object} directory - The directory structure object.
+		//@param {string} currentPath - The current path being processed.
+		// @returns {Array<{url: string, name: string, path: string}>} The array of files formatted for JSZip processing.
+		function processDirectory(directory, currentPath = '') {
+		let filesArray = [];
 		
-	   /**
-		* Fetches data from the specified URL and handles it accordingly.
-		* @param {string} url - The URL from which to fetch the data.
-		* @returns {Promise<Blob|ArrayBuffer>} A promise that resolves with the fetched data as a Blob or ArrayBuffer.
-		*/
-	   function fetchData(url) {
-		   return fetch(url)
-			   .then(function(response) {
-				   if (response.ok) {
-					   if (response.headers.get('Content-Type').startsWith('application/octet-stream')) {
-						   // Handle binary data
-						   return response.arrayBuffer();
-					   } else {
-						   // Handle other types of files
-						   return response.blob();
-					   }
-				   } else {
-					   throw new Error('Network response was not ok: ' + response.status + ' ' + response.statusText);
-				   }
-			   });
-	   }
-	   
-	   
-	   /**
-		* Fetches multiple files from the specified URLs and returns a promise that resolves with an array of fetched data.
-		* @param {Object[]} files - An array of objects containing the URL, the desired file name, and the directory path.
-		* @returns {Promise<Array<{name: string, path: string, data: Blob|ArrayBuffer}>>} A promise that resolves with an array of fetched data.
-		*/
-	   function fetchFiles(files) {
-		   return Promise.all(files.map(function(file) {
-			   return fetchData(file.url).then(function(data) {
-				   return { name: file.name, path: file.path, data: data };
-			   });
-		   }));
-	   }
-	   
-	   /**
-		* Fetches multiple files from the specified URLs, organizes them into directories, and creates a ZIP file.
-		* @param {Object[]} filesToFetch - An array of objects containing file information (URL, name, and path).
-		* @returns {Promise<Blob>} A promise that resolves with the generated ZIP file as a Blob.
-		*/
-	   function createZip(filesToFetch) {
-		   if (!Array.isArray(filesToFetch) || filesToFetch.length === 0) {
-			   return Promise.reject(new Error('Invalid filesToFetch parameter. It should be a non-empty array.'));
-		   }
-	   
-		   var zip = new JSZip();
-	   
-		   return fetchFiles(filesToFetch)
-			   .then(function(dataArray) {
-				   dataArray.forEach(function(file) {
-					   var directoryPath = file.path.trim();
-					   if (directoryPath !== '') {
-						   var directory = zip.folder(directoryPath);
-					   }
-					   console.log("directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' }: "); //Test code
-					   console.log("directoryPath + file.name: " + directoryPath + file.name); //Test code
-					   console.log("file.data" + file.data); //Test code
-					   console.log("binary: " + (typeof file.data !== 'string')); //Test code
-					   
-					   zip.file(directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' });
-				   });
-
-				   //In this case, we need to inject the generated app.json
-				   //This should be abstracted out to be a function call's return.
-				   console.log("toZip['app.json']"); //Test code
-				   console.dir(toZip['app.json']); //Test code
-
-				   zip.file("app.json", toZip['app.json'], { binary: false } );
-
-				   //Additionally, the index.html page needed to be adjusted, so it must be added seperatly
-				   console.log("toZip['index.html']"); //Test code
-				   console.dir(toZip['index.html']); //Test code
-
-				   zip.file("index.html", toZip['index.html'], { binary: false } );
-
-
-				   //Return the completed zip content.
-				   return zip.generateAsync({ type: 'blob' });
-			   })
-			   .catch(function(error) {
-				   // Throw error to be handled by the caller
-				   throw new Error('Error creating ZIP file: ' + error.message);
-			   });
-	   }
-	   
-	   /*
-	   // Usage example:
-	   var filesToFetch = [
-		   { url: 'https://example.com/index.html', name: 'index.html', path: '' },
-		   { url: 'https://example.com/banner.jpg', name: 'banner.jpg', path: '' },
-		   { url: 'https://example.com/index.js', name: 'index.js', path: '' },
-		   { url: 'https://example.com/binaryfile1', name: 'binaryfile1.bin', path: 'binaries/' },
-		   { url: 'https://example.com/binaryfile2', name: 'binaryfile2.bin', path: 'binaries/' },
-		   { url: 'https://example.com/binaryfile3', name: 'binaryfile3.bin', path: 'binaries/' }
-	   ];
-	   */
-
-/*
-var directoryStructure = {
-	//root Directory
-	//"app.json": null, //new ArrayBuffer( file data goes here),
-	//"index.html": new ArrayBuffer( file data here ),
-	"newindex.html": '../editor/files/exportFiles/index.html',
-	"data": { //directory - data
-		"largeLambda.patt": '../editor/files/exportFiles/data/largeLambda.patt'
-	},
-	"img": { //directory - img
-		"favicon.ico": '../editor/files/exportFiles/img/favicon.ico'
-	},
-	"js": { //directory - js
-		"APP.js": '../editor/files/exportFiles/js/APP.js',
-		"GLTFLoader.js": '../editor/files/exportFiles/js/GLTFLoader.js',
-		"LegacyJSONLoader.js": '../editor/files/exportFiles/js/LegacyJSONLoader.js',
-		"OrbitControls.js": '../editor/files/exportFiles/js/OrbitControls.js',
-		"VRButton.js": '../editor/files/exportFiles/js/VRButton.js',
-		"ar-threex.js": '../editor/files/exportFiles/js/ar-threex.js',
-		"ar.js": '../editor/files/exportFiles/js/ar.js',
-		"es-module-shims.js": '../editor/files/exportFiles/js/es-module-shims.js',
-		"stats.min.js": '../editor/files/exportFiles/js/stats.min.js',
-		"three.js": '../editor/files/exportFiles/js/three.js',
-		"three.module.js": '../editor/files/exportFiles/js/three.module.js',
-		"jsartoolkit5": {
-			//js subdirectory - jsartoolkit5
-			"artoolkit.api.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.d.ts',
-			"artoolkit.api.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.js',
-			"artoolkit.min.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.min.js',
-			"artoolkit.three.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.d.ts',
-			"artoolkit.three.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.js',
-			"artoolkit.worker.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.worker.js',
-			"index.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/index.d.ts',
-			"index.js": '../editor/files/exportFiles/js/jsartoolkit5/index.js'
-		},
-		"data": {
-			//js subdirectory - data
-			"camera_para.dat": '../editor/files/exportFiles/js/data/camera_para.dat',
-			"lambda-old.patt": '../editor/files/exportFiles/js/data/lambda-old.patt',
-			"lambda.patt": '../editor/files/exportFiles/js/data/lambda.patt'
+		for (let key in directory) {
+		if (directory.hasOwnProperty(key)) {
+			let value = directory[key];
+			if (typeof value === 'string') {
+				// It's a file
+				filesArray.push({
+					url: value,
+					name: key,
+					path: currentPath
+				});
+			} else if (typeof value === 'object' && value !== null) {
+				// It's a directory
+				let newPath = currentPath ? `${currentPath}${key}/` : `${key}/`;
+				filesArray = filesArray.concat(processDirectory(value, newPath));
+			}
 		}
-	},
-	"resources": { //directory - resources
-		"images": {
-			//resources subdirectory - images
-			"Large Lambda AR Marker.png": '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png'
 		}
-	}
-};
-*/
+		
+		return filesArray;
+		}
+		*/
 
+		/*
+		// Convert the directory structure to the required file array format
+		var filesToFetch = processDirectory(directoryStructure);
+		*/
 
-/*
-// Recursively processes the directory structure to generate the file array.
-//@param {Object} directory - The directory structure object.
-//@param {string} currentPath - The current path being processed.
-// @returns {Array<{url: string, name: string, path: string}>} The array of files formatted for JSZip processing.
-function processDirectory(directory, currentPath = '') {
-let filesArray = [];
+		var filesToFetch = [
+			//{url: '../editor/files/exportFiles/index.html', name: 'index.html', path: ''}, //this file needs to be edited before it's added in
+			{ url: '../editor/files/exportFiles/data/largeLambda.patt', name: 'largeLambda.patt', path: 'data/' },
+			{ url: '../editor/files/exportFiles/data/camera_para.dat', name: 'camera_para.dat', path: 'data/' },
+			{ url: '../editor/files/exportFiles/img/favicon.ico', name: 'favicon.ico', path: 'img/' },
+			{ url: '../editor/files/exportFiles/js/APP.js', name: 'APP.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/GLTFLoader.js', name: 'GLTFLoader.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/LegacyJSONLoader.js', name: 'LegacyJSONLoader.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/OrbitControls.js', name: 'OrbitControls.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/VRButton.js', name: 'VRButton.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/ar-threex.js', name: 'ar-threex.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/ar.js', name: 'ar.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/es-module-shims.js', name: 'es-module-shims.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/stats.min.js', name: 'stats.min.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/three.js', name: 'three.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/three.module.js', name: 'three.module.js', path: 'js/' },
+			{ url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.d.ts', name: 'artoolkit.api.d.ts', path: 'js/jsartoolkit5/' },
+			{ url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.js', name: 'artoolkit.api.js', path: 'js/jsartoolkit5/' },
+			{ url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.min.js', name: 'artoolkit.min.js', path: 'js/jsartoolkit5/' },
+			{ url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.d.ts', name: 'artoolkit.three.d.ts', path: 'js/jsartoolkit5/' },
+			{ url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.js', name: 'artoolkit.three.js', path: 'js/jsartoolkit5/' },
+			{ url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.worker.js', name: 'artoolkit.worker.js', path: 'js/jsartoolkit5/' },
+			{ url: '../editor/files/exportFiles/js/jsartoolkit5/index.d.ts', name: 'index.d.ts', path: 'js/jsartoolkit5/' },
+			{ url: '../editor/files/exportFiles/js/jsartoolkit5/index.js', name: 'index.js', path: 'js/jsartoolkit5/' },
+			{ url: '../editor/files/exportFiles/js/data/camera_para.dat', name: 'camera_para.dat', path: 'js/data/' },
+			{ url: '../editor/files/exportFiles/js/data/lambda-old.patt', name: 'lambda-old.patt', path: 'js/data/' },
+			{ url: '../editor/files/exportFiles/js/data/lambda.patt', name: 'lambda.patt', path: 'js/data/' },
+			{ url: '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png', name: 'Large Lambda AR Marker.png', path: 'resources/images/' }
+		]
 
-for (let key in directory) {
-if (directory.hasOwnProperty(key)) {
-	let value = directory[key];
-	if (typeof value === 'string') {
-		// It's a file
-		filesArray.push({
-			url: value,
-			name: key,
-			path: currentPath
-		});
-	} else if (typeof value === 'object' && value !== null) {
-		// It's a directory
-		let newPath = currentPath ? `${currentPath}${key}/` : `${key}/`;
-		filesArray = filesArray.concat(processDirectory(value, newPath));
-	}
-}
-}
+		console.dir(filesToFetch);//test code
 
-return filesArray;
-}
-*/
+		/*
+		createZip(filesToFetch)
+			.then(function(content) {
+				saveAs(content, 'example.zip');
+			})
+			.catch(function(error) {
+				console.error(error);
+			});
+			*/
 
-/*
-// Convert the directory structure to the required file array format
-var filesToFetch = processDirectory(directoryStructure);
-*/
+		const zipFileName = appTitle + ".zip"
 
-var filesToFetch = [
-	//{url: '../editor/files/exportFiles/index.html', name: 'index.html', path: ''}, //this file needs to be edited before it's added in
-	{url: '../editor/files/exportFiles/data/largeLambda.patt', name: 'largeLambda.patt', path: 'data/'}, 
-	{url: '../editor/files/exportFiles/data/camera_para.dat', name: 'camera_para.dat', path: 'data/'}, 
-	{url: '../editor/files/exportFiles/img/favicon.ico', name: 'favicon.ico', path: 'img/'},
-	{url: '../editor/files/exportFiles/js/APP.js', name: 'APP.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/GLTFLoader.js', name: 'GLTFLoader.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/LegacyJSONLoader.js', name: 'LegacyJSONLoader.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/OrbitControls.js', name: 'OrbitControls.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/VRButton.js', name: 'VRButton.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/ar-threex.js', name: 'ar-threex.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/ar.js', name: 'ar.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/es-module-shims.js', name: 'es-module-shims.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/stats.min.js', name: 'stats.min.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/three.js', name: 'three.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/three.module.js', name: 'three.module.js', path: 'js/'},
-	{url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.d.ts', name: 'artoolkit.api.d.ts', path: 'js/jsartoolkit5/'},
-	{url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.js', name: 'artoolkit.api.js', path: 'js/jsartoolkit5/'},
-	{url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.min.js', name: 'artoolkit.min.js', path: 'js/jsartoolkit5/'},
-	{url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.d.ts', name: 'artoolkit.three.d.ts', path: 'js/jsartoolkit5/'},
-	{url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.js', name: 'artoolkit.three.js', path: 'js/jsartoolkit5/'},
-	{url: '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.worker.js', name: 'artoolkit.worker.js', path: 'js/jsartoolkit5/'},
-	{url: '../editor/files/exportFiles/js/jsartoolkit5/index.d.ts', name: 'index.d.ts', path: 'js/jsartoolkit5/'},
-	{url: '../editor/files/exportFiles/js/jsartoolkit5/index.js', name: 'index.js', path: 'js/jsartoolkit5/'},
-	{url: '../editor/files/exportFiles/js/data/camera_para.dat', name: 'camera_para.dat', path: 'js/data/'},
-	{url: '../editor/files/exportFiles/js/data/lambda-old.patt', name: 'lambda-old.patt', path: 'js/data/'},
-	{url: '../editor/files/exportFiles/js/data/lambda.patt', name: 'lambda.patt', path: 'js/data/'},
-	{url: '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png', name: 'Large Lambda AR Marker.png', path: 'resources/images/'}
-	]
+		// Add files to the ZIP archive and generate the ZIP file
+		createZip(filesToFetch)
+			//.then(function() {
+			//	return zip.generateAsync({ type: "blob" });
+			//}) 
+			.then(function (content) {
+				// Save the ZIP file locally
+				//saveAs(content, "files.zip");
+				//Need to inject the app.json file before Ziping the file
+				//zip.file(directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' });
+				console.log("============"); //Test code
+				console.log("passed content: "); //Test code
+				console.dir(content); //Test code
+				console.log("============"); //Test code
 
-console.dir(filesToFetch);//test code
-
-	   /*
-	   createZip(filesToFetch)
-		   .then(function(content) {
-			   saveAs(content, 'example.zip');
-		   })
-		   .catch(function(error) {
-			   console.error(error);
-		   });
-		   */
-
-	const zipFileName = appTitle + ".zip"
-
-	// Add files to the ZIP archive and generate the ZIP file
-	createZip(filesToFetch)
-		//.then(function() {
-		//	return zip.generateAsync({ type: "blob" });
-		//}) 
-		.then(function(content) {
-			// Save the ZIP file locally
-			//saveAs(content, "files.zip");
-			//Need to inject the app.json file before Ziping the file
-			//zip.file(directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' });
-			console.log("============"); //Test code
-			console.log("passed content: "); //Test code
-			console.dir(content); //Test code
-			console.log("============"); //Test code
-
-			save(content, zipFileName);
-			//save(content, "files.zip");
-		})
-		.catch(function(error) {
-			console.error("Error creating ZIP file:", error);
-		});
+				save(content, zipFileName);
+				//save(content, "files.zip");
+			})
+			.catch(function (error) {
+				console.error("Error creating ZIP file:", error);
+			});
 
 
 	});
 	options.add(option);
+	//End Publish AR App
 
-	//
+	/////////////---------------------------------------//////////////
+	/////////////---------------------------------------//////////////
+/////////////---------------------------------------//////////////
+/////////////---------------------------------------//////////////
+/////////////---------------------------------------//////////////
+
+//Start Publish AR NFT App
+// Publish an AR NFT App
+//Edited to export as an ARJS NFT Template
+option = new UIRow();
+option.setClass('option');
+option.setTextContent(strings.getKey('menubar/file/publish_arnft'));
+option.onClick(async function () {
+
+	//Setup a storage location for the index.html and the json.app file content
+	const toZipForARNFT = {};
+
+	// Create a new JSZip instance
+	var zip = new JSZip();
+
+	//prepare to build the model.gltf file for export
+	const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
+
+	const exporter = new GLTFExporter();
+
+	// Export the scene as GLTF (non-binary)
+	exporter.parse(editor.scene, function (gltfOutput) {
+
+		//Step 1: Stringify the GLTF result
+		// This gltfOutput is a plain JS object — you can JSON.stringify it
+		const gltfString = JSON.stringify(gltfOutput, null, 2);
+
+		// Assign to content for zipping
+		toZipForARNFT['model.gltf'] = gltfString;
+
+		const appTitle = config.getKey('project/title') || 'AR Natural Feature Tracker Web App';
+
+		//Adjust the template index.html to have the corrected title, etc.
+		const loader = new THREE.FileLoader();
+		loader.load('../editor/files/ARNFTExportFiles/index.html', function (content) {
+
+			content = content.replace('<!-- title -->', appTitle);
+
+			const theNFTModelName = "model";
+
+			const modelNameToInsert = "nftAddTJS.addModel('./Data/models/" + theNFTModelName + ".gltf', 'generatedMarkerFile', 80, false);"
+
+			content = content.replace('//<!-- insert model -->', modelNameToInsert);
+
+			const includes = [];
+
+			content = content.replace('<!-- includes -->', includes.join('\n\t\t'));
+
+			let editButton = '';
+			/*
+			if (config.getKey('project/editable')) {
+
+				editButton = [
+					'			let button = document.createElement( \'a\' );',
+					'			button.href = \'https://threejs.org/editor/#file=\' + location.href.split( \'/\' ).slice( 0, - 1 ).join( \'/\' ) + \'/app.json\';',
+					'			button.style.cssText = \'position: absolute; bottom: 20px; right: 20px; padding: 10px 16px; color: #fff; border: 1px solid #fff; border-radius: 20px; text-decoration: none;\';',
+					'			button.target = \'_blank\';',
+					'			button.textContent = \'EDIT\';',
+					'			document.body.appendChild( button );',
+				].join('\n');
+
+			}
+			*/
+			/*
+			content = content.replace('\t\t\t/* edit button ', editButton);
+			*/
+
+			//toZipForARNFT['index.html'] = strToU8(content);
+			toZipForARNFT['index.html'] = content;
+			//Building a JSZip
+			//Test that JZZip Loaded:
+			// Function to probe the JSZip library
+			function probeJSZipForARNFT() {
+				if (typeof JSZip !== 'undefined') {
+					console.log('JSZip is defined.');
+					console.log('Type of JSZip:', typeof JSZip);
+					try {
+						var zip = new JSZip();
+						console.log('JSZip instance created successfully:', zip);
+					} catch (error) {
+						console.error('Error creating JSZip instance:', error);
+					}
+				} else {
+					console.error('JSZip is not defined.');
+				}
+			}
+
+			// Run the probe function
+			probeJSZipForARNFT();
+
+			// Define the relative base path
+			const basePath = "../editor/files/ARNFTExportFiles/";
+
+			/**
+			 * Fetches data from the specified URL and handles it accordingly.
+			 * @param {string} url - The URL from which to fetch the data.
+			 * @returns {Promise<Blob|ArrayBuffer>} A promise that resolves with the fetched data as a Blob or ArrayBuffer.
+			 */
+			function fetchData(url) {
+				return fetch(url)
+					.then(function (response) {
+						if (response.ok) {
+							if (response.headers.get('Content-Type').startsWith('application/octet-stream')) {
+								// Handle binary data
+								return response.arrayBuffer();
+							} else {
+								// Handle other types of files
+								return response.blob();
+							}
+						} else {
+							throw new Error('Network response was not ok: ' + response.status + ' ' + response.statusText);
+						}
+					});
+			}
+
+			/**
+			 * Fetches multiple files from the specified URLs and returns a promise that resolves with an array of fetched data.
+			 * @param {Object[]} files - An array of objects containing the URL, the desired file name, and the directory path.
+			 * @returns {Promise<Array<{name: string, path: string, data: Blob|ArrayBuffer}>>} A promise that resolves with an array of fetched data.
+			 */
+			function fetchFilesForARNFT(files) {
+				return Promise.all(files.map(function (file) {
+					return fetchData(file.url).then(function (data) {
+						return { name: file.name, path: file.path, data: data };
+					});
+				}));
+			}
+
+			/**
+			 * Fetches multiple files from the specified URLs, organizes them into directories, and creates a ZIP file.
+			 * @param {Object[]} filesToFetch - An array of objects containing file information (URL, name, and path).
+			 * @returns {Promise<Blob>} A promise that resolves with the generated ZIP file as a Blob.
+			 */
+			function createZipForARNFT(filesToFetch) {
+				if (!Array.isArray(filesToFetch) || filesToFetch.length === 0) {
+					return Promise.reject(new Error('Invalid filesToFetch parameter. It should be a non-empty array.'));
+				}
+
+				var zip = new JSZip();
+
+				return fetchFilesForARNFT(filesToFetch)
+					.then(function (dataArray) {
+						dataArray.forEach(function (file) {
+							var directoryPath = file.path.trim();
+							if (directoryPath !== '') {
+								var directory = zip.folder(directoryPath);
+							}
+							console.log("directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' }: "); //Test code
+							console.log("directoryPath + file.name: " + directoryPath + file.name); //Test code
+							console.log("file.data" + file.data); //Test code
+							console.log("binary: " + (typeof file.data !== 'string')); //Test code
+
+							zip.file(directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' });
+						});
+
+						//In this case, we need to inject the generated app.json
+						//This should be abstracted out to be a function call's return.
+						console.log("toZipForARNFT['model.gltf']"); //Test code
+						console.dir(toZipForARNFT['model.gltf']); //Test code
+
+						zip.file("Data/models/model.gltf", toZipForARNFT['model.gltf'], { binary: false });
+
+						//Additionally, the index.html page needed to be adjusted, so it must be added separately
+						console.log("toZipForARNFT['index.html']"); //Test code
+						//console.dir(toZipForARNFT['index.html']); //Test code
+
+						zip.file("index.html", toZipForARNFT['index.html'], { binary: false });
+
+						//zip.file("index.html", toZipForARNFT['../editor/files/exportFiles/index.html'], { binary: false });
+
+
+						//Return the completed zip content.
+						return zip.generateAsync({ type: 'blob' });
+					})
+					.catch(function (error) {
+						// Throw error to be handled by the caller
+						throw new Error('Error creating ZIP file: ' + error.message);
+					});
+			}
+			/*
+			// Usage example:
+			var filesToFetch = [
+				{ url: 'https://example.com/index.html', name: 'index.html', path: '' },
+				{ url: 'https://example.com/banner.jpg', name: 'banner.jpg', path: '' },
+				{ url: 'https://example.com/index.js', name: 'index.js', path: '' },
+				{ url: 'https://example.com/binaryfile1', name: 'binaryfile1.bin', path: 'binaries/' },
+				{ url: 'https://example.com/binaryfile2', name: 'binaryfile2.bin', path: 'binaries/' },
+				{ url: 'https://example.com/binaryfile3', name: 'binaryfile3.bin', path: 'binaries/' }
+			];
+			*/
+
+			/*
+			// Convert the directory structure to the required file array format
+			var filesToFetch = processDirectory(directoryStructure);
+			*/
+
+			var filesToFetch = [
+			//{url: '../editor/files/ARNFTExportFiles/index.html', name: 'index.html', path: ''}, //this file needs to be edited before it's added in
+			{ url: '../editor/files/ARNFTExportFiles/CODE_OF_CONDUCT.md', name: 'CODE_OF_CONDUCT.md', path: '' },
+			{ url: '../editor/files/ARNFTExportFiles/config-StanState.json', name: 'config-StanState.json', path: '' },
+			{ url: '../editor/files/ARNFTExportFiles/CONTRIBUTING.md', name: 'CONTRIBUTING.md', path: '' },
+			{ url: '../editor/files/ARNFTExportFiles/credits.html', name: 'credits.html', path: '' },
+			{ url: '../editor/files/ARNFTExportFiles/css/nft-style.css', name: 'nft-style.css', path: 'css/' },
+			{ url: '../editor/files/ARNFTExportFiles/Data/camera_para.dat', name: 'camera_para.dat', path: 'Data/' },
+			{ url: '../editor/files/ARNFTExportFiles/Data/models/Model_ReadMe.txt', name: 'Model_ReadMe.txt', path: 'Data/models/' },
+			{ url: '../editor/files/ARNFTExportFiles/Data/StanState-logo.png', name: 'StanState-logo.png', path: 'Data/' },
+			{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.fset', name: 'generatedMarkerFile.fset', path: 'DataNFT/' },
+			{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.fset3', name: 'generatedMarkerFile.fset3', path: 'DataNFT/' },
+			{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.iset', name: 'generatedMarkerFile.iset', path: 'DataNFT/' },
+			{ url: '../editor/files/ARNFTExportFiles/favicon.ico', name: 'favicon.ico', path: 'ARNFTExportFiles/' },
+			{ url: '../editor/files/ARNFTExportFiles/img/pinball.jpg', name: 'pinball.jpg', path: 'img/' },
+			{ url: '../editor/files/ARNFTExportFiles/img/ReadMe.txt', name: 'ReadMe.txt', path: 'img/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/ARnftThreejs.js', name: 'ARnftThreejs.js', path: 'js/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/cameraViewRenderer.js', name: 'cameraViewRenderer.js', path: 'js/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/ARnft.js', name: 'ARnft.js', path: 'js/third_party/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/artoolkitNFT.js', name: 'artoolkitNFT.js', path: 'js/third_party/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/config/ConfigData.js', name: 'ConfigData.js', path: 'js/third_party/config/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/index.js', name: 'index.js', path: 'js/third_party/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/NFTWorker.js', name: 'NFTWorker.js', path: 'js/third_party/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/renderers/CameraViewRenderer.js', name: 'CameraViewRenderer.js', path: 'js/third_party/renderers/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/three.js/LICENSE.txt', name: 'LICENSE.txt', path: 'js/third_party/three.js/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/three.js/stats.min.js', name: 'stats.min.js', path: 'js/third_party/three.js/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/three.js/three.min.js', name: 'three.min.js', path: 'js/third_party/three.js/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/three.js/threeJS R151.3.js', name: 'threeJS R151.3.js', path: 'js/third_party/three.js/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/utils/ARnftUtils.js', name: 'ARnftUtils.js', path: 'js/third_party/utils/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/utils/html/Container.js', name: 'Container.js', path: 'js/third_party/utils/html/' },
+			{ url: '../editor/files/ARNFTExportFiles/js/third_party/Worker.js', name: 'Worker.js', path: 'js/third_party/' },
+			{ url: '../editor/files/ARNFTExportFiles/LICENSE', name: 'LICENSE', path: '' }
+		]
+
+			console.dir(filesToFetch);//test code
+
+			/*
+			createZipForARNFT(filesToFetch)
+				.then(function(content) {
+					saveAs(content, 'example.zip');
+				})
+				.catch(function(error) {
+					console.error(error);
+				});
+			*/
+
+			const zipFileName = appTitle + ".zip"
+
+			// Add files to the ZIP archive and generate the ZIP file
+			createZipForARNFT(filesToFetch)
+				.then(function (content) {
+					console.log("============"); //Test code
+					console.log("passed content: "); //Test code
+					console.dir(content); //Test code
+					console.log("============"); //Test code
+
+					save(content, zipFileName);
+				})
+				.catch(function (error) {
+					console.error("Error creating ZIP file:", error);
+				});
+		});
+	}, undefined, {
+		binary: false,
+		animations: getAnimations(editor.scene)
+	});
+});
+
+options.add(option);
+
+//End Publish AR NFT App
+
+/////////////---------------------------------------//////////////
+/////////////---------------------------------------//////////////
+/////////////---------------------------------------//////////////
+/////////////---------------------------------------//////////////
+
+	/////////////---------------------------------------//////////////
+
 
 	const link = document.createElement('a');
 	function save(blob, filename) {

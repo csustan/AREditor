@@ -25,7 +25,10 @@ function Strings( config ) {
 			//'menubar/file/export/stl': 'Export STL',
 			//'menubar/file/export/stl_binary': 'Export STL (Binary)',
 			//'menubar/file/export/usdz': 'Export USDZ',
-			'menubar/file/publish': 'Publish',
+			//'menubar/file/publish': 'Publish',
+
+			'menubar/file/publish_ar': 'Publish AR Marker App',
+			'menubar/file/publish_arnft': 'Publish AR Natural Feature Tracker App',
 
 			'menubar/edit': 'Edit',
 			'menubar/edit/undo': 'Undo (Ctrl+Z)',

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title><!-- title --></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=1">
+    <link rel="stylesheet" href="css/nft-style.css">
+</head>
+
+<body>
+    <!-- includes -->
+    <a href="https://raw.githubusercontent.com/artoolkitx/artoolkit5/master/doc/Marker%20images/pinball.jpg"
+        class="ui marker" target="_blank">
+        Marker Image
+    </a>
+
+    <script src="js/third_party/three.js/three.min.js"></script>
+    <script src="js/ARnftThreejs.js"></script>
+    <script src="js/third_party/ARnft.js"></script>
+
+    <script>
+        const entities = [
+            //ADD_MARKER_LOCATIONS_HERE
+            //Markers should be added in this manner:s
+            { name: 'generatedMarkerFile', markerUrl: "DataNFT/generatedMarkerFile" }
+
+        ]
+        let width = 640;
+        let height = 480;
+        ARnft.ARnft.initWithEntities(width, height, entities,  'config-StanState.json', true)
+            .then((nft) => {
+                
+                let testEntities = ARnft.ARnft.getEntities();
+                console.log("entities from getEntities static method: ", testEntities);
+
+                document.addEventListener('containerEvent', function (ev) {
+
+                    let canvas = document.getElementById('canvas');
+                    let fov = 0.8 * 180 / Math.PI;
+                    let ratio = width / height;
+                    let config = {
+                        "renderer": {
+                            "alpha": true,
+                            "antialias": true,
+                            "context": null,
+                            "precision": "mediump",
+                            "premultipliedAlpha": true,
+                            "stencil": true,
+                            "depth": true,
+                            "logarithmicDepthBuffer": true
+                        },
+                        "camera": {
+                            "fov": fov,
+                            "ratio": ratio,
+                            "near": 0.01,
+                            "far": 1000
+                        }
+                    }
+
+                    let sceneThreejs = new ARnftThreejs.SceneRendererTJS(config, canvas, nft.uuid, true);
+                    sceneThreejs.initRenderer();
+
+                    //Test Code -- duplicated as needed, replace "[NameOfTheMarkerToTest]" with the marker you want to test
+                    //window.addEventListener('getMatrixGL_RH-' + nft.uuid + '-' + '[NameOfTheMarkerToTest]', function() {
+                    //    console.log('this is the [NameOfTheMarkerToTest]!');
+                    //})
+
+                    let nftAddTJS = new ARnftThreejs.NFTaddTJS(nft.uuid);
+                    //Objects are added in this manner:
+                    //nftAddTJS.add(cube, 'generatedMarkerFile', false);
+
+                    let names = nftAddTJS.getNames();
+                    console.log(names);
+
+                    //ADD_MARKER_MODEL_CONNECTIONS_HERE
+                    //Add markers here
+                    //nftAddTJS.addModel('./Data/models/Shield037.gltf', 'generatedMarkerFile', 80, false);
+                    //<!-- insert model -->
+
+                    const tick = () => {
+                        sceneThreejs.draw();
+                        window.requestAnimationFrame(tick)
+                    }
+                    tick()
+
+                })
+            }).catch((error) => {
+                console.log(error);
+            });            
+    </script>
+
+</body>
+
+</html>

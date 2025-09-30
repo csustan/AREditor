@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AR.js Marker Generator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+
+    .marker-generator-panel {
+      max-width: 360px;
+      padding: 12px;
+    }
+
+    .marker-generator-panel label {
+      display: block;
+      margin: 10px 0 4px;
+    }
+
+    .marker-generator-panel input[type="range"],
+    .marker-generator-panel input[type="text"],
+    .marker-generator-panel input[type="file"] {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    .marker-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 12px 0;
+    }
+
+    button {
+      padding: 6px 8px;
+      background: #000;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: blue;
+    }
+
+    #imageContainer {
+      margin-top: 12px;
+      text-align: center;
+    }
+
+    #imageContainer img {
+      width: 100%;
+      max-width: 100%;
+      border: 1px solid #ccc;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .color-mode-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .color-input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .custom-dropdown {
+      position: relative;
+      display: inline-block;
+      width: 14em;
+    }
+
+    .custom-dropdown-toggle {
+      width: 100%;
+      padding: 6px;
+      background: white;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .custom-dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      background: white;
+      border: 1px solid #ccc;
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 5;
+      display: none;
+    }
+
+    .custom-dropdown-menu.show {
+      display: block;
+    }
+
+    .custom-dropdown-item {
+      padding: 6px 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .custom-dropdown-item:hover {
+      background-color: #f0f0f0;
+    }
+
+    .color-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      border: 1px solid #999;
+    }
+
+    #borderColorSwatch {
+      width: 24px;
+      height: 24px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    #borderColorCustom {
+  width: 5em;
+  margin-left: 3em;
+}
+
+
+  </style>
+</head>
+<body>
+<div class="marker-generator-panel">
+  <label for="fileinput">Upload Marker Image:</label>
+  <input type="file" id="fileinput" accept="image/*" />
+
+  <label for="patternRatioSlider">Pattern Ratio: <span id="patternRatioLabel">0.50</span></label>
+  <input id="patternRatioSlider" type="range" min="10" max="90" value="50" />
+
+  <label for="imageSize">Image Size: <span id="imageSizeLabel">512</span>px</label>
+  <input id="imageSize" type="range" min="150" max="2500" value="512" />
+
+  <label>Border Color:</label>
+  <div class="color-mode-group">
+    <label><input type="radio" name="colorMode" value="named" checked /> By Color Name</label>
+    <label><input type="radio" name="colorMode" value="custom" /> Custom Hex Code</label>
+  </div>
+
+  <div class="color-input-group">
+    <div class="custom-dropdown" id="colorDropdown">
+      <div class="custom-dropdown-toggle" id="dropdownToggle">
+        <span id="selectedColorLabel"><span class="color-swatch" style="background:black;"></span> Black</span>
+        ▼
+      </div>
+      <div class="custom-dropdown-menu" id="dropdownMenu">
+
+          <div class="custom-dropdown-item" data-color="black"><span class="color-swatch" style="background:black;"></span> Black</div>
+  <div class="custom-dropdown-item" data-color="white"><span class="color-swatch" style="background:white;"></span> White</div>
+  <div class="custom-dropdown-item" data-color="gray"><span class="color-swatch" style="background:gray;"></span> Gray</div>
+  <div class="custom-dropdown-item" data-color="silver"><span class="color-swatch" style="background:silver;"></span> Silver</div>
+  <div class="custom-dropdown-item" data-color="red"><span class="color-swatch" style="background:red;"></span> Red</div>
+  <div class="custom-dropdown-item" data-color="maroon"><span class="color-swatch" style="background:maroon;"></span> Maroon</div>
+  <div class="custom-dropdown-item" data-color="orange"><span class="color-swatch" style="background:orange;"></span> Orange</div>
+  <div class="custom-dropdown-item" data-color="gold"><span class="color-swatch" style="background:gold;"></span> Gold</div>
+  <div class="custom-dropdown-item" data-color="yellow"><span class="color-swatch" style="background:yellow;"></span> Yellow</div>
+  <div class="custom-dropdown-item" data-color="olive"><span class="color-swatch" style="background:olive;"></span> Olive</div>
+  <div class="custom-dropdown-item" data-color="lime"><span class="color-swatch" style="background:lime;"></span> Lime</div>
+  <div class="custom-dropdown-item" data-color="green"><span class="color-swatch" style="background:green;"></span> Green</div>
+  <div class="custom-dropdown-item" data-color="teal"><span class="color-swatch" style="background:teal;"></span> Teal</div>
+  <div class="custom-dropdown-item" data-color="cyan"><span class="color-swatch" style="background:cyan;"></span> Cyan</div>
+  <div class="custom-dropdown-item" data-color="aqua"><span class="color-swatch" style="background:aqua;"></span> Aqua</div>
+  <div class="custom-dropdown-item" data-color="blue"><span class="color-swatch" style="background:blue;"></span> Blue</div>
+  <div class="custom-dropdown-item" data-color="navy"><span class="color-swatch" style="background:navy;"></span> Navy</div>
+  <div class="custom-dropdown-item" data-color="indigo"><span class="color-swatch" style="background:indigo;"></span> Indigo</div>
+  <div class="custom-dropdown-item" data-color="purple"><span class="color-swatch" style="background:purple;"></span> Purple</div>
+  <div class="custom-dropdown-item" data-color="violet"><span class="color-swatch" style="background:violet;"></span> Violet</div>
+  <div class="custom-dropdown-item" data-color="magenta"><span class="color-swatch" style="background:magenta;"></span> Magenta</div>
+  <div class="custom-dropdown-item" data-color="pink"><span class="color-swatch" style="background:pink;"></span> Pink</div>
+  <div class="custom-dropdown-item" data-color="deeppink"><span class="color-swatch" style="background:deeppink;"></span> Deeppink</div>
+  <div class="custom-dropdown-item" data-color="hotpink"><span class="color-swatch" style="background:hotpink;"></span> Hotpink</div>
+  <div class="custom-dropdown-item" data-color="lightpink"><span class="color-swatch" style="background:lightpink;"></span> Lightpink</div>
+  <div class="custom-dropdown-item" data-color="salmon"><span class="color-swatch" style="background:salmon;"></span> Salmon</div>
+  <div class="custom-dropdown-item" data-color="tomato"><span class="color-swatch" style="background:tomato;"></span> Tomato</div>
+  <div class="custom-dropdown-item" data-color="orangered"><span class="color-swatch" style="background:orangered;"></span> Orangered</div>
+  <div class="custom-dropdown-item" data-color="coral"><span class="color-swatch" style="background:coral;"></span> Coral</div>
+  <div class="custom-dropdown-item" data-color="chocolate"><span class="color-swatch" style="background:chocolate;"></span> Chocolate</div>
+  <div class="custom-dropdown-item" data-color="sienna"><span class="color-swatch" style="background:sienna;"></span> Sienna</div>
+  <div class="custom-dropdown-item" data-color="brown"><span class="color-swatch" style="background:brown;"></span> Brown</div>
+  <div class="custom-dropdown-item" data-color="peru"><span class="color-swatch" style="background:peru;"></span> Peru</div>
+  <div class="custom-dropdown-item" data-color="tan"><span class="color-swatch" style="background:tan;"></span> Tan</div>
+  <div class="custom-dropdown-item" data-color="wheat"><span class="color-swatch" style="background:wheat;"></span> Wheat</div>
+  <div class="custom-dropdown-item" data-color="khaki"><span class="color-swatch" style="background:khaki;"></span> Khaki</div>
+  <div class="custom-dropdown-item" data-color="darkgreen"><span class="color-swatch" style="background:darkgreen;"></span> Darkgreen</div>
+  <div class="custom-dropdown-item" data-color="forestgreen"><span class="color-swatch" style="background:forestgreen;"></span> Forestgreen</div>
+  <div class="custom-dropdown-item" data-color="seagreen"><span class="color-swatch" style="background:seagreen;"></span> Seagreen</div>
+  <div class="custom-dropdown-item" data-color="mediumseagreen"><span class="color-swatch" style="background:mediumseagreen;"></span> Mediumseagreen</div>
+  <div class="custom-dropdown-item" data-color="lightgreen"><span class="color-swatch" style="background:lightgreen;"></span> Lightgreen</div>
+  <div class="custom-dropdown-item" data-color="springgreen"><span class="color-swatch" style="background:springgreen;"></span> Springgreen</div>
+  <div class="custom-dropdown-item" data-color="mediumspringgreen"><span class="color-swatch" style="background:mediumspringgreen;"></span> Mediumspringgreen</div>
+  <div class="custom-dropdown-item" data-color="turquoise"><span class="color-swatch" style="background:turquoise;"></span> Turquoise</div>
+  <div class="custom-dropdown-item" data-color="darkturquoise"><span class="color-swatch" style="background:darkturquoise;"></span> Darkturquoise</div>
+  <div class="custom-dropdown-item" data-color="paleturquoise"><span class="color-swatch" style="background:paleturquoise;"></span> Paleturquoise</div>
+  <div class="custom-dropdown-item" data-color="skyblue"><span class="color-swatch" style="background:skyblue;"></span> Skyblue</div>
+  <div class="custom-dropdown-item" data-color="lightskyblue"><span class="color-swatch" style="background:lightskyblue;"></span> Lightskyblue</div>
+  <div class="custom-dropdown-item" data-color="deepskyblue"><span class="color-swatch" style="background:deepskyblue;"></span> Deepskyblue</div>
+  <div class="custom-dropdown-item" data-color="dodgerblue"><span class="color-swatch" style="background:dodgerblue;"></span> Dodgerblue</div>
+  <div class="custom-dropdown-item" data-color="steelblue"><span class="color-swatch" style="background:steelblue;"></span> Steelblue</div>
+  <div class="custom-dropdown-item" data-color="royalblue"><span class="color-swatch" style="background:royalblue;"></span> Royalblue</div>
+  <div class="custom-dropdown-item" data-color="cornflowerblue"><span class="color-swatch" style="background:cornflowerblue;"></span> Cornflowerblue</div>
+  <div class="custom-dropdown-item" data-color="slateblue"><span class="color-swatch" style="background:slateblue;"></span> Slateblue</div>
+  <div class="custom-dropdown-item" data-color="mediumslateblue"><span class="color-swatch" style="background:mediumslateblue;"></span> Mediumslateblue</div>
+  <div class="custom-dropdown-item" data-color="rebeccapurple"><span class="color-swatch" style="background:rebeccapurple;"></span> Rebeccapurple</div>
+  <div class="custom-dropdown-item" data-color="darkorchid"><span class="color-swatch" style="background:darkorchid;"></span> Darkorchid</div>
+  <div class="custom-dropdown-item" data-color="mediumorchid"><span class="color-swatch" style="background:mediumorchid;"></span> Mediumorchid</div>
+  <div class="custom-dropdown-item" data-color="orchid"><span class="color-swatch" style="background:orchid;"></span> Orchid</div>
+  <div class="custom-dropdown-item" data-color="plum"><span class="color-swatch" style="background:plum;"></span> Plum</div>
+        
+      </div>
+    </div>
+
+    <input id="borderColorCustom" type="text" value="000000" placeholder="000000" maxlength="6" disabled />
+    <div id="borderColorSwatch"></div>
+  </div>
+
+  <div class="marker-buttons">
+    <button id="buttonDownloadEncoded" disabled>Download Marker (.patt)</button>
+    <button id="buttonDownloadFullImage" disabled>Download Image</button>
+    <button id="buttonDownloadPDFOnePerPage" disabled>PDF One/Page</button>
+    <button id="buttonDownloadPDFTwoPerPage" disabled>PDF Two/Page</button>
+    <button id="buttonDownloadPDFSixPerPage" disabled>PDF Six/Page</button>
+  </div>
+
+  <div id="imageContainer"></div>
+</div>
+
+<script src="./js/pdfMake/pdfmake.min.js"></script>
+<script src="./js/pdfMake/vfs_fonts.js"></script>
+<script src="./js/threex-arpatternfile.js"></script>
+
+<script>
+  let innerImageURL = null;
+  let fullMarkerURL = null;
+  let imageName = null;
+
+  // Custom dropdown logic
+  const dropdownToggle = document.getElementById('dropdownToggle');
+  const dropdownMenu = document.getElementById('dropdownMenu');
+  const selectedColorLabel = document.getElementById('selectedColorLabel');
+  let selectedColor = 'black';
+
+  dropdownToggle.addEventListener('click', () => {
+    dropdownMenu.classList.toggle('show');
+  });
+
+  document.querySelectorAll('.custom-dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      selectedColor = item.getAttribute('data-color');
+      selectedColorLabel.innerHTML = item.innerHTML;
+      dropdownMenu.classList.remove('show');
+      updateFullMarkerImage();
+    });
+  });
+
+  function getSelectedColor() {
+    return selectedColor;
+  }
+
+  window.onload = function () {
+    innerImageURL = 'inner-images/inner-arjs.png';
+    updateFullMarkerImage();
+  };
+
+  document.querySelector('#fileinput').addEventListener('change', function () {
+    const file = this.files[0];
+    imageName = file.name.split('.').slice(0, -1).join('.') || file.name;
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      innerImageURL = event.target.result;
+      updateFullMarkerImage();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.querySelector('#patternRatioSlider').addEventListener('input', function () {
+    const patternRatio = this.value / 100;
+    document.querySelector('#patternRatioLabel').textContent = patternRatio.toFixed(2);
+    updateFullMarkerImage();
+  });
+
+  document.querySelector('#imageSize').addEventListener('input', function () {
+    const size = this.value;
+    document.querySelector('#imageSizeLabel').textContent = size;
+    updateFullMarkerImage();
+  });
+
+  const colorCustomInput = document.getElementById('borderColorCustom');
+  const colorModeRadios = document.getElementsByName('colorMode');
+
+  for (const radio of colorModeRadios) {
+    radio.addEventListener('change', () => {
+      const useCustom = document.querySelector('input[name="colorMode"]:checked').value === 'custom';
+      document.getElementById('colorDropdown').style.pointerEvents = useCustom ? 'none' : 'auto';
+      colorCustomInput.disabled = !useCustom;
+      updateFullMarkerImage();
+    });
+  }
+
+  colorCustomInput.addEventListener('input', updateFullMarkerImage);
+
+  function updateFullMarkerImage() {
+    if (!innerImageURL) return;
+
+    const patternRatio = document.querySelector('#patternRatioSlider').value / 100;
+    const imageSize = document.querySelector('#imageSize').value;
+    const useCustom = document.querySelector('input[name="colorMode"]:checked').value === 'custom';
+    let borderColor = useCustom
+      ? `#${colorCustomInput.value.trim().replace(/^#/, '')}`
+      : getSelectedColor();
+
+
+      const isHex = /^#([0-9A-F]{6})$/i.test(borderColor);
+const s = new Option().style;
+s.color = borderColor;
+const isNamed = s.color !== '';
+
+if (!isHex && !isNamed) {
+  borderColor = 'black';
+}
+
+const swatch = document.getElementById('borderColorSwatch');
+swatch.style.backgroundColor = isHex || isNamed ? borderColor : 'transparent';
+colorCustomInput.style.borderColor = useCustom && !isHex ? 'red' : '';
+
+
+
+    if (!isHex && !isNamed) {
+      borderColor = 'black';
+    }
+
+    THREEx.ArPatternFile.buildFullMarker(innerImageURL, patternRatio, imageSize, borderColor, function (markerUrl) {
+      fullMarkerURL = markerUrl;
+      const markerImage = document.createElement('img');
+      markerImage.src = markerUrl;
+      const container = document.getElementById('imageContainer');
+      container.innerHTML = '';
+      container.appendChild(markerImage);
+      document.querySelectorAll('.marker-buttons button').forEach(btn => btn.disabled = !fullMarkerURL);
+    });
+  }
+
+  document.getElementById('buttonDownloadEncoded').addEventListener('click', function () {
+    if (!innerImageURL) return alert('Upload a file first');
+    THREEx.ArPatternFile.encodeImageURL(innerImageURL, function (patternFileString) {
+      THREEx.ArPatternFile.triggerDownload(patternFileString, `pattern-${imageName || 'marker'}.patt`);
+    });
+  });
+
+  document.getElementById('buttonDownloadFullImage').addEventListener('click', function () {
+    if (!innerImageURL) return alert('Upload a file first');
+    const a = document.createElement('a');
+    a.href = fullMarkerURL;
+    a.download = `pattern-${imageName || 'marker'}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+
+document.addEventListener('click', function (event) {
+  if (!document.getElementById('colorDropdown').contains(event.target)) {
+    dropdownMenu.classList.remove('show');
+  }
+});
+
+  function generatePDFLayout(countPerPage) {
+    if (!fullMarkerURL) return alert('Generate a marker first');
+    const sizes = { 1: 600, 2: 300, 6: 250 };
+    const docDefinition = { content: [] };
+    const w = sizes[countPerPage];
+    const row = () => [{ image: fullMarkerURL, width: w }, { image: fullMarkerURL, width: w }];
+
+    if (countPerPage === 1) {
+      docDefinition.content.push({ image: fullMarkerURL, width: w, alignment: 'center' });
+    } else if (countPerPage === 2) {
+      docDefinition.content.push(...row());
+    } else {
+      docDefinition.content.push(...[row(), row(), row()]);
+    }
+
+    pdfMake.createPdf(docDefinition).open();
+  }
+
+  document.getElementById('buttonDownloadPDFOnePerPage').addEventListener('click', () => generatePDFLayout(1));
+  document.getElementById('buttonDownloadPDFTwoPerPage').addEventListener('click', () => generatePDFLayout(2));
+  document.getElementById('buttonDownloadPDFSixPerPage').addEventListener('click', () => generatePDFLayout(6));
+</script>
+</body>
+</html>

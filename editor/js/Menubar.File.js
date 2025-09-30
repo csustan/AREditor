@@ -518,15 +518,18 @@ function MenubarFile(editor) {
 	
 		options.add( new UIHorizontalRule() );
 		//*/ //End diabling of file menu options
-	//Start Publish AR App
+
+//Start Publish AR App
 	//Edited to export as an ARJS Template
 	option = new UIRow();
 	option.setClass('option');
 	option.setTextContent(strings.getKey('menubar/file/publish_ar'));
-	option.onClick(function () {
-
+	//option.onClick(function () {
+	option.onClick(async function () { //The use of the improved AR Marker generator requires await, which means the function needs to be an async
 		//Setup a storage location for the index.html and the json.app file content
 		const toZip = {};
+
+
 
 		//prepare to build the app.json file for export
 		let output = editor.toJSON();
@@ -649,57 +652,7 @@ function MenubarFile(editor) {
 			* @property {Object} resources.images - The images directory within the resources directory.
 		* @property {null} resources.images.Large Lambda AR Marker.png - The large lambda AR marker image file.
 			*/
-		/*
-		//switching to an Array structure
-			var directoryStructure = {
-			//root Directory
-			//"app.json": null, //new ArrayBuffer( file data goes here),
-			//"index.html": new ArrayBuffer( file data here ),
-			"newindex.html": '../editor/files/exportFiles/index.html',
-			"data": { //directory - data
-				"largeLambda.patt": '../editor/files/exportFiles/data/largeLambda.patt'
-			},
-			"img": { //directory - img
-				"favicon.ico": '../editor/files/exportFiles/img/favicon.ico'
-			},
-			"js": { //directory - js
-				"APP.js": '../editor/files/exportFiles/js/APP.js',
-				"GLTFLoader.js": '../editor/files/exportFiles/js/GLTFLoader.js',
-				"LegacyJSONLoader.js": '../editor/files/exportFiles/js/LegacyJSONLoader.js',
-				"OrbitControls.js": '../editor/files/exportFiles/js/OrbitControls.js',
-				"VRButton.js": '../editor/files/exportFiles/js/VRButton.js',
-				"ar-threex.js": '../editor/files/exportFiles/js/ar-threex.js',
-				"ar.js": '../editor/files/exportFiles/js/ar.js',
-				"es-module-shims.js": '../editor/files/exportFiles/js/es-module-shims.js',
-				"stats.min.js": '../editor/files/exportFiles/js/stats.min.js',
-				"three.js": '../editor/files/exportFiles/js/three.js',
-				"three.module.js": '../editor/files/exportFiles/js/three.module.js',
-				"jsartoolkit5": {
-					//js subdirectory - jsartoolkit5
-					"artoolkit.api.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.d.ts',
-					"artoolkit.api.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.js',
-					"artoolkit.min.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.min.js',
-					"artoolkit.three.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.d.ts',
-					"artoolkit.three.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.js',
-					"artoolkit.worker.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.worker.js',
-					"index.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/index.d.ts',
-					"index.js": '../editor/files/exportFiles/js/jsartoolkit5/index.js'
-				},
-				"data": {
-					//js subdirectory - data
-					"camera_para.dat": '../editor/files/exportFiles/js/data/camera_para.dat',
-					"lambda-old.patt": '../editor/files/exportFiles/js/data/lambda-old.patt',
-					"lambda.patt": '../editor/files/exportFiles/js/data/lambda.patt'
-				}
-			},
-			"resources": { //directory - resources
-				"images": {
-					//resources subdirectory - images
-					"Large Lambda AR Marker.png": '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png'
-				}
-			}
-		};
-		*/
+
 		/**
 		* This code demonstrates how to fetch multiple files of different types (including binary data and blobs),
 		* organize them into directories, and create a ZIP file using JSZip.
@@ -743,11 +696,24 @@ function MenubarFile(editor) {
 		 * @returns {Promise<Array<{name: string, path: string, data: Blob|ArrayBuffer}>>} A promise that resolves with an array of fetched data.
 		 */
 		function fetchFiles(files) {
+			//return Promise.all(files.map(function (file) {
+			//	return fetchData(file.url).then(function (data) {
+			//		return { name: file.name, path: file.path, data: data };
+			//	});
+			//}));
+			
 			return Promise.all(files.map(function (file) {
+				// Skip fetch if file already has data via a Marker Generation
+				if (file.data) {
+				return Promise.resolve(file);
+				}
+
+				// Otherwise, fetch from URL as normal
 				return fetchData(file.url).then(function (data) {
-					return { name: file.name, path: file.path, data: data };
+				return { name: file.name, path: file.path, data: data };
 				});
 			}));
+
 		}
 
 		/**
@@ -800,99 +766,6 @@ function MenubarFile(editor) {
 				});
 		}
 
-		/*
-		// Usage example:
-		var filesToFetch = [
-			{ url: 'https://example.com/index.html', name: 'index.html', path: '' },
-			{ url: 'https://example.com/banner.jpg', name: 'banner.jpg', path: '' },
-			{ url: 'https://example.com/index.js', name: 'index.js', path: '' },
-			{ url: 'https://example.com/binaryfile1', name: 'binaryfile1.bin', path: 'binaries/' },
-			{ url: 'https://example.com/binaryfile2', name: 'binaryfile2.bin', path: 'binaries/' },
-			{ url: 'https://example.com/binaryfile3', name: 'binaryfile3.bin', path: 'binaries/' }
-		];
-		*/
-
-		/*
-		var directoryStructure = {
-			//root Directory
-			//"app.json": null, //new ArrayBuffer( file data goes here),
-			//"index.html": new ArrayBuffer( file data here ),
-			"newindex.html": '../editor/files/exportFiles/index.html',
-			"data": { //directory - data
-				"largeLambda.patt": '../editor/files/exportFiles/data/largeLambda.patt'
-			},
-			"img": { //directory - img
-				"favicon.ico": '../editor/files/exportFiles/img/favicon.ico'
-			},
-			"js": { //directory - js
-				"APP.js": '../editor/files/exportFiles/js/APP.js',
-				"GLTFLoader.js": '../editor/files/exportFiles/js/GLTFLoader.js',
-				"LegacyJSONLoader.js": '../editor/files/exportFiles/js/LegacyJSONLoader.js',
-				"OrbitControls.js": '../editor/files/exportFiles/js/OrbitControls.js',
-				"VRButton.js": '../editor/files/exportFiles/js/VRButton.js',
-				"ar-threex.js": '../editor/files/exportFiles/js/ar-threex.js',
-				"ar.js": '../editor/files/exportFiles/js/ar.js',
-				"es-module-shims.js": '../editor/files/exportFiles/js/es-module-shims.js',
-				"stats.min.js": '../editor/files/exportFiles/js/stats.min.js',
-				"three.js": '../editor/files/exportFiles/js/three.js',
-				"three.module.js": '../editor/files/exportFiles/js/three.module.js',
-				"jsartoolkit5": {
-					//js subdirectory - jsartoolkit5
-					"artoolkit.api.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.d.ts',
-					"artoolkit.api.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.api.js',
-					"artoolkit.min.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.min.js',
-					"artoolkit.three.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.d.ts',
-					"artoolkit.three.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.three.js',
-					"artoolkit.worker.js": '../editor/files/exportFiles/js/jsartoolkit5/artoolkit.worker.js',
-					"index.d.ts": '../editor/files/exportFiles/js/jsartoolkit5/index.d.ts',
-					"index.js": '../editor/files/exportFiles/js/jsartoolkit5/index.js'
-				},
-				"data": {
-					//js subdirectory - data
-					"camera_para.dat": '../editor/files/exportFiles/js/data/camera_para.dat',
-					"lambda-old.patt": '../editor/files/exportFiles/js/data/lambda-old.patt',
-					"lambda.patt": '../editor/files/exportFiles/js/data/lambda.patt'
-				}
-			},
-			"resources": { //directory - resources
-				"images": {
-					//resources subdirectory - images
-					"Large Lambda AR Marker.png": '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png'
-				}
-			}
-		};
-		*/
-
-
-		/*
-		// Recursively processes the directory structure to generate the file array.
-		//@param {Object} directory - The directory structure object.
-		//@param {string} currentPath - The current path being processed.
-		// @returns {Array<{url: string, name: string, path: string}>} The array of files formatted for JSZip processing.
-		function processDirectory(directory, currentPath = '') {
-		let filesArray = [];
-		
-		for (let key in directory) {
-		if (directory.hasOwnProperty(key)) {
-			let value = directory[key];
-			if (typeof value === 'string') {
-				// It's a file
-				filesArray.push({
-					url: value,
-					name: key,
-					path: currentPath
-				});
-			} else if (typeof value === 'object' && value !== null) {
-				// It's a directory
-				let newPath = currentPath ? `${currentPath}${key}/` : `${key}/`;
-				filesArray = filesArray.concat(processDirectory(value, newPath));
-			}
-		}
-		}
-		
-		return filesArray;
-		}
-		*/
 
 		/*
 		// Convert the directory structure to the required file array format
@@ -924,12 +797,181 @@ function MenubarFile(editor) {
 			{ url: '../editor/files/exportFiles/js/jsartoolkit5/index.d.ts', name: 'index.d.ts', path: 'js/jsartoolkit5/' },
 			{ url: '../editor/files/exportFiles/js/jsartoolkit5/index.js', name: 'index.js', path: 'js/jsartoolkit5/' },
 			{ url: '../editor/files/exportFiles/js/data/camera_para.dat', name: 'camera_para.dat', path: 'js/data/' },
-			{ url: '../editor/files/exportFiles/js/data/lambda-old.patt', name: 'lambda-old.patt', path: 'js/data/' },
-			{ url: '../editor/files/exportFiles/js/data/lambda.patt', name: 'lambda.patt', path: 'js/data/' },
-			{ url: '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png', name: 'Large Lambda AR Marker.png', path: 'resources/images/' }
+			{ url: '../editor/files/exportFiles/js/data/lambda-old.patt', name: 'lambda-old.patt', path: 'js/data/' }//, //comment out the AR Markers and generate them instead
+			//{ url: '../editor/files/exportFiles/js/data/lambda.patt', name: 'lambda.patt', path: 'js/data/' },
+			//{ url: '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png', name: 'Large Lambda AR Marker.png', path: 'resources/images/' }
+		
 		]
 
 		console.dir(filesToFetch);//test code
+
+		//Generate the marker .patt and .png then append it to the filesToFetch:
+
+		// start new ARMarker configuration code
+		let markerPatternFile;
+		let markerImageFile;
+
+		function configureCustomMarkerFiles() {
+			
+			try {
+				const customPatt = getSharedMarkerPattern?.();
+				const customPng = getSharedMarkerImageDataURL?.();
+
+				console.log("customPatt:"); // test code
+				console.dir(customPatt); // test code
+
+				console.log("customPng:"); // test code
+				console.dir(customPng); // test code
+
+				// Pattern
+				if (customPatt) {
+					console.log("Custom pattern found. Using Custom Pattern.");
+					markerPatternFile = {
+						name: 'lambda.patt',
+						path: 'js/data/',
+						data: new Blob([customPatt], { type: 'text/plain' })
+					};
+				} else {
+					console.log("Custom pattern not found. Switching to Default.");
+					markerPatternFile = {
+						url: '../editor/files/exportFiles/data/largeLambda.patt',
+						name: 'lambda.patt',
+						path: 'js/data/'
+					};
+				}
+
+				// Image
+				if (customPng) {
+					console.log("Custom PNG found. Using Custom PNG.");
+					try {
+						const byteString = atob(customPng.split(',')[1]);
+						const byteArray = new Uint8Array(byteString.length);
+						for (let i = 0; i < byteString.length; i++) {
+							byteArray[i] = byteString.charCodeAt(i);
+						}
+						markerImageFile = {
+							name: 'marker-image.png',
+							path: 'resources/images/',
+							data: new Blob([byteArray], { type: 'image/png' })
+						};
+					} catch (err) {
+						console.warn("Failed to decode custom PNG. Using default instead.", err);
+						markerImageFile = {
+							url: '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png',
+							name: 'Large Lambda AR Marker.png',
+							path: 'resources/images/'
+						};
+					}
+				} else {
+					console.log("Custom image not found. Switching to Default.");
+					markerImageFile = {
+						url: '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png',
+						name: 'Large Lambda AR Marker.png',
+						path: 'resources/images/'
+					};
+				}
+			} catch (e) {
+				console.error('[AR Marker] Unexpected error during marker configuration:', e);
+				// Final fallback in case *everything* fails (safe to keep)
+				markerPatternFile = {
+					url: '../editor/files/exportFiles/data/largeLambda.patt',
+					name: 'lambda.patt',
+					path: 'js/data/'
+				};
+				markerImageFile = {
+					url: '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png',
+					name: 'Large Lambda AR Marker.png',
+					path: 'resources/images/'
+				};
+			}
+
+		
+		}
+
+		console.log("[Publish AR App] Generating AR Marker Assets...");
+
+
+
+		await generateMarkerImage();   // must come first to get the framed PNG
+		await generateMarkerPattern(); // then generate the pattern without frame
+
+			if (typeof generateMarkerImage === 'function' && typeof generateMarkerPattern === 'function') {
+				Promise.all([
+					generateMarkerImage(),   // With border (PNG)
+					generateMarkerPattern()  // Without border (.patt)
+				]).then(() => {
+					console.log("[Publish AR App] Marker files generated. Proceeding to configuration.");
+					configureCustomMarkerFiles(); // <-- now safe to call AFTER marker files exist
+
+					// inject into filesToFetch, etc...
+					filesToFetch.push(markerPatternFile);
+					filesToFetch.push(markerImageFile);
+
+					// continue to zip...
+					createZip(filesToFetch)
+					.then(function (content) {
+						console.log("============");
+						console.log("passed content: ");
+						console.dir(content);
+						console.log("============");
+
+						save(content, zipFileName);
+					})
+					.catch(function (error) {
+						console.error("Error creating ZIP file:", error);
+					});
+				}).catch((error) => {
+					console.error("Marker generation failed:", error);
+				});
+				} else {
+				console.warn('[Publish AR App] Required marker generation functions are missing.');
+				}
+
+
+		console.log("[Publish AR App] Reached marker configuration step");
+		configureCustomMarkerFiles();
+		console.log("[Publish AR App] Marker files configured:", markerPatternFile, markerImageFile);
+
+		
+
+		// end new ARMarker configuration code
+
+		// start new ARMarker injection
+		filesToFetch.push(markerPatternFile);
+		filesToFetch.push(markerImageFile);
+		// end new ARMarker injection
+
+		console.log("filesToFetch");//test code
+		console.dir(filesToFetch);//test code
+
+		/*
+		// start new ARMarker Generation code
+			(function () {
+			try {
+				const customPatt = getSharedMarkerPattern?.();
+				const customPng = getSharedMarkerImageDataURL?.();
+
+				if (customPatt) {
+				filesToFetch.push({ name: 'lambda.patt', path: 'data/', data: new Blob([customPatt], { type: 'text/plain' }) });
+				} else {
+				filesToFetch.push({ url: '../editor/files/exportFiles/data/largeLambda.patt', name: 'lambda.patt', path: 'data/' });
+				}
+
+				if (customPng) {
+				const byteString = atob(customPng.split(',')[1]);
+				const byteArray = new Uint8Array(byteString.length);
+				for (let i = 0; i < byteString.length; i++) byteArray[i] = byteString.charCodeAt(i);
+				filesToFetch.push({ name: 'marker-image.png', path: 'resources/images/', data: new Blob([byteArray], { type: 'image/png' }) });
+				} else {
+				filesToFetch.push({ url: '../editor/files/exportFiles/resources/images/Large Lambda AR Marker.png', name: 'Large Lambda AR Marker.png', path: 'resources/images/' });
+				}
+			} catch (e) {
+				console.warn('Could not inject marker files:', e);
+			}
+			})();
+			// end new ARMarker code
+		*/
+
 
 		/*
 		createZip(filesToFetch)
@@ -968,7 +1010,7 @@ function MenubarFile(editor) {
 
 	});
 	options.add(option);
-	//End Publish AR App
+//End Publish AR App
 
 	/////////////---------------------------------------//////////////
 	/////////////---------------------------------------//////////////

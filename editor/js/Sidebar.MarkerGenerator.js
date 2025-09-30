@@ -2,21 +2,95 @@ import {
   UIPanel, UIText, UIInput, UINumber, UIButton, UIRow
 } from './libs/ui.js';
 
+// --- Shared marker state (used by UI and global functions) ---
+let innerImageURL = null;
+let fullMarkerURL = null;
+let imageName = null;
+let selectedColor = 'black';
+const defaultMarkerURL = 'files/LargeLambdaSymbol.png';
+
+// --- Shared exported pattern/image state for zip building ---
+let sharedMarkerPattern = null;
+let sharedMarkerImageDataURL = null;
+
+// Export state accessors globally
+window.getSharedMarkerPattern = () => sharedMarkerPattern;
+window.getSharedMarkerImageDataURL = () => sharedMarkerImageDataURL;
+
+// --- Global Generator Functions (used by Menubar.File.js) ---
+window.generateMarkerImage = async function generateMarkerImage() {
+  return new Promise((resolve) => {
+    const fallbackImage = extractSceneBackgroundAsDataURL();
+    const imageSource = innerImageURL || fallbackImage;
+
+    const ratio = window._markerPatternRatio?.getValue?.() ?? 0.5;
+    const size = window._markerImageSize?.getValue?.() ?? 512;
+    const color = selectedColor;
+
+    THREEx.ArPatternFile.buildFullMarker(imageSource, ratio, size, color, (markerUrl) => {
+      fullMarkerURL = markerUrl;
+      sharedMarkerImageDataURL = markerUrl;
+
+      if (window._markerPreviewImage) {
+        window._markerPreviewImage.src = markerUrl;
+        window._markerPreviewImage.style.display = 'block';
+      }
+
+      console.log('[Generator] Marker image (with border) generated.');
+      resolve();
+    });
+  });
+};
+
+window.generateMarkerPattern = async function generateMarkerPattern() {
+  return new Promise((resolve) => {
+    const fallbackImage = extractSceneBackgroundAsDataURL();
+    const imageSource = innerImageURL || fallbackImage;
+
+    THREEx.ArPatternFile.encodeImageURL(imageSource, (patternFileString) => {
+      sharedMarkerPattern = patternFileString;
+      console.log('[Generator] Marker pattern (no border) generated.');
+      resolve();
+    });
+  });
+};
+
+// --- Utility: extract fallback background image ---
+function extractSceneBackgroundAsDataURL() {
+  const bg = window._editor?.scene?.background;
+  if (!bg || !bg.image) {
+    console.warn('[Marker Generator] No scene background. Using default.');
+    return defaultMarkerURL;
+  }
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = bg.image.width || 512;
+    canvas.height = bg.image.height || 512;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bg.image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    console.warn('[Marker Generator] Failed to extract background:', e);
+    return defaultMarkerURL;
+  }
+}
+
+// --- Main UI Component ---
 function SidebarMarkerGenerator(editor) {
+  // Store editor globally so global funcs can access it
+  window._editor = editor;
+
   const container = new UIPanel();
   container.setId('sidebar-marker-generator');
   container.setPaddingTop('20px');
 
-  let innerImageURL = null;
-  let fullMarkerURL = null;
-  let imageName = null;
-  let selectedColor = 'black';
-
-  // --- Upload Image Button ---
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
   fileInput.accept = 'image/*';
-  fileInput.style.display = 'none';
+  fileInput.style.position = 'absolute';
+  fileInput.style.left = '-9999px';
+  document.body.appendChild(fileInput);
 
   fileInput.addEventListener('change', () => {
     const file = fileInput.files[0];
@@ -32,36 +106,26 @@ function SidebarMarkerGenerator(editor) {
     reader.readAsDataURL(file);
   });
 
-  const uploadButton = new UIButton('Upload Marker Image').onClick(() => {
-    fileInput.click();
-  });
-
-  container.dom.appendChild(fileInput);
+  const uploadButton = new UIButton('Upload Marker Image').onClick(() => fileInput.click());
   container.add(uploadButton);
 
-  // --- Preview Image ---
   const previewImage = document.createElement('img');
   previewImage.style.marginTop = '10px';
   previewImage.style.maxWidth = '100%';
   previewImage.style.border = '1px solid #444';
   previewImage.style.display = 'none';
   container.dom.appendChild(previewImage);
+  window._markerPreviewImage = previewImage;
 
-  // --- Pattern Ratio ---
   container.add(new UIText('Pattern Ratio:'));
   const patternRatio = new UINumber(0.5).setRange(0.1, 0.9).setStep(0.01).onChange(updateFullMarkerImage);
   container.add(patternRatio);
+  window._markerPatternRatio = patternRatio;
 
-  // --- Image Size ---
   container.add(new UIText('Image Size (px):'));
   const imageSize = new UINumber(512).setRange(150, 2500).setStep(10).onChange(updateFullMarkerImage);
   container.add(imageSize);
-
-  // --- Border Color Dropdown ---
-  const colorOptions = [
-    'black', 'white', 'red', 'green', 'blue',
-    'yellow', 'orange', 'purple', 'pink', 'gray'
-  ];
+  window._markerImageSize = imageSize;
 
   const colorDropdown = new UIInput().setValue(selectedColor).onChange(() => {
     selectedColor = colorDropdown.getValue();
@@ -74,7 +138,7 @@ function SidebarMarkerGenerator(editor) {
   container.add(swatchRow);
 
   const swatchRow2 = new UIRow();
-  colorOptions.forEach(color => {
+  ['black', 'white', 'red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'gray'].forEach(color => {
     const swatch = document.createElement('div');
     swatch.style.width = '20px';
     swatch.style.height = '20px';
@@ -93,7 +157,6 @@ function SidebarMarkerGenerator(editor) {
   });
   container.add(swatchRow2);
 
-  // --- Download Buttons ---
   const downloadPattern = new UIButton('Download Marker (.patt)').onClick(() => {
     if (!innerImageURL) return alert('Upload a file first');
     THREEx.ArPatternFile.encodeImageURL(innerImageURL, (patternFileString) => {
@@ -114,16 +177,26 @@ function SidebarMarkerGenerator(editor) {
   container.add(downloadPattern);
   container.add(downloadImage);
 
-  // --- PDF Export Buttons ---
-  const pdf1 = new UIButton('PDF One/Page').onClick(() => generatePDFLayout(1));
-  const pdf2 = new UIButton('PDF Two/Page').onClick(() => generatePDFLayout(2));
-  const pdf6 = new UIButton('PDF Six/Page').onClick(() => generatePDFLayout(6));
-
+  const pdf1 = new UIButton('PDF One/Page').onClick(async () => await generatePDFLayout(1));
+  const pdf2 = new UIButton('PDF Two/Page').onClick(async () => await generatePDFLayout(2));
+  const pdf6 = new UIButton('PDF Six/Page').onClick(async () => await generatePDFLayout(6));
   container.add(pdf1);
   container.add(pdf2);
   container.add(pdf6);
 
-  // --- Marker Generator Logic ---
+  const resetButton = new UIButton('Reset to Scene Background').onClick(() => {
+    innerImageURL = extractSceneBackgroundAsDataURL();
+    imageName = 'scene-background';
+    updateFullMarkerImage();
+  });
+  container.add(resetButton);
+
+  const setPatternButton = new UIButton('Set Pattern').onClick(async () => {
+    await window.generateMarkerImage();
+    await window.generateMarkerPattern();
+  });
+  container.add(setPatternButton);
+
   function updateFullMarkerImage() {
     if (!innerImageURL) return;
 
@@ -146,8 +219,11 @@ function SidebarMarkerGenerator(editor) {
     });
   }
 
-  function generatePDFLayout(countPerPage) {
+  async function generatePDFLayout(countPerPage) {
+    await window.generateMarkerImage();
+
     if (!fullMarkerURL) return alert('Generate a marker first');
+
     const sizes = { 1: 600, 2: 300, 6: 250 };
     const docDefinition = { content: [] };
     const w = sizes[countPerPage];
@@ -163,6 +239,11 @@ function SidebarMarkerGenerator(editor) {
 
     pdfMake.createPdf(docDefinition).open();
   }
+
+  // Initial marker
+  innerImageURL = extractSceneBackgroundAsDataURL();
+  imageName = 'scene-background';
+  updateFullMarkerImage();
 
   return container;
 }

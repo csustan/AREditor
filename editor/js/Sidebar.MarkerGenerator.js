@@ -2,12 +2,42 @@ import {
   UIPanel, UIText, UIInput, UINumber, UIButton, UIRow
 } from './libs/ui.js';
 
+//This will generate a Canvas Element that will work as a fall back wor whn the images won't load.
+//It's returned as a URL to be compatible with the rest of the code.
+function generateFallbackRedSwatch() {
+  const canvas = document.createElement('canvas');
+  const size = 512;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // Red background
+  ctx.fillStyle = '#cc0000';
+  ctx.fillRect(0, 0, size, size);
+
+  // White X
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 40;
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(60, 60);
+  ctx.lineTo(size - 60, size - 60);
+  ctx.moveTo(size - 60, 60);
+  ctx.lineTo(60, size - 60);
+  ctx.stroke();
+
+  return canvas.toDataURL('image/png');
+}
+
+
 // --- Shared marker state (used by UI and global functions) ---
 let innerImageURL = null;
 let fullMarkerURL = null;
 let imageName = null;
 let selectedColor = 'black';
-const defaultMarkerURL = 'files/LargeLambdaSymbol.png';
+const defaultMarkerURL = 'files/LargeLambdaSymbol.png'; //Test Code
+//const defaultMarkerURL = generateFallbackRedSwatch(); //Utlize the default
 
 // --- Shared exported pattern/image state for zip building ---
 let sharedMarkerPattern = null;
@@ -32,8 +62,25 @@ window.generateMarkerImage = async function generateMarkerImage() {
       sharedMarkerImageDataURL = markerUrl;
 
       if (window._markerPreviewImage) {
-        window._markerPreviewImage.src = markerUrl;
-        window._markerPreviewImage.style.display = 'block';
+
+
+        const img = window._markerPreviewImage;
+        img.src = '';
+        requestAnimationFrame(() => {
+          img.src = markerUrl;
+          img.style.display = 'block';
+        });
+
+        //window._markerPreviewImage.src = markerUrl;
+        
+        // Force browsers that cashe URLs to reload the image by appending a "cache buster" value that is meaningless.
+        //previewImage.src = '';
+        //requestAnimationFrame(() => {
+        //  previewImage.src = markerUrl;
+        //});
+        //window._markerPreviewImage.src = markerUrl + '?v=' + Date.now(); 
+        
+       // window._markerPreviewImage.style.display = 'block';
       }
 
       console.log('[Generator] Marker image (with border) generated.');
@@ -99,11 +146,20 @@ function SidebarMarkerGenerator(editor) {
     imageName = file.name.split('.').slice(0, -1).join('.') || file.name;
 
     const reader = new FileReader();
+
     reader.onload = (e) => {
       innerImageURL = e.target.result;
+      fullMarkerURL = null; // force regenerate even if the same image -
+      //- wihtout this, resetting the image then importing would cause the image preview not to refresh
       updateFullMarkerImage();
+    
+      //Clear input value to allow re-uploading the same file uploaded before without bugging out.
+      fileInput.value = '';
+
     };
+
     reader.readAsDataURL(file);
+
   });
 
   const uploadButton = new UIButton('Upload Marker Image').onClick(() => fileInput.click());
@@ -187,14 +243,17 @@ function SidebarMarkerGenerator(editor) {
   const resetButton = new UIButton('Reset to Scene Background').onClick(() => {
     innerImageURL = extractSceneBackgroundAsDataURL();
     imageName = 'scene-background';
+    fullMarkerURL = null; // Force regenerate on reset
     updateFullMarkerImage();
   });
+
   container.add(resetButton);
 
   const setPatternButton = new UIButton('Set Pattern').onClick(async () => {
     await window.generateMarkerImage();
     await window.generateMarkerPattern();
   });
+  
   container.add(setPatternButton);
 
   function updateFullMarkerImage() {
@@ -214,8 +273,17 @@ function SidebarMarkerGenerator(editor) {
 
     THREEx.ArPatternFile.buildFullMarker(innerImageURL, ratio, size, color, (markerUrl) => {
       fullMarkerURL = markerUrl;
-      previewImage.src = markerUrl;
-      previewImage.style.display = 'block';
+      //previewImage.src = markerUrl;
+      // Force browsers that cashe URLs to reload the image by appending a "cache buster" value that is meaningless.
+      
+      //previewImage.src = markerUrl + '?v=' + Date.now();
+      //previewImage.style.display = 'block';
+      previewImage.src = ''; // Clear first
+      requestAnimationFrame(() => {
+        previewImage.src = markerUrl;
+        previewImage.style.display = 'block';
+      });
+      
     });
   }
 

@@ -147,12 +147,17 @@ function SidebarMarkerGenerator(editor) {
 
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       innerImageURL = e.target.result;
       fullMarkerURL = null; // force regenerate even if the same image -
       //- wihtout this, resetting the image then importing would cause the image preview not to refresh
       updateFullMarkerImage();
     
+      //Automatically regenerate pattern
+      await window.generateMarkerImage();
+      await window.generateMarkerPattern();
+
+
       //Clear input value to allow re-uploading the same file uploaded before without bugging out.
       fileInput.value = '';
 

@@ -193,30 +193,33 @@ function SidebarMarkerGenerator(editor) {
     updateFullMarkerImage();
   });
 
-  const swatchRow = new UIRow();
-  swatchRow.add(new UIText('Border Color:').setWidth('90px'));
-  swatchRow.add(colorDropdown);
-  container.add(swatchRow);
+  
+  // //Disabling the Color Change option for now.
+  // const swatchRow = new UIRow();
+  // swatchRow.add(new UIText('Border Color:').setWidth('90px'));
+  // swatchRow.add(colorDropdown);
+  // container.add(swatchRow);
 
-  const swatchRow2 = new UIRow();
-  ['black', 'white', 'red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'gray'].forEach(color => {
-    const swatch = document.createElement('div');
-    swatch.style.width = '20px';
-    swatch.style.height = '20px';
-    swatch.style.margin = '2px';
-    swatch.style.border = '1px solid #888';
-    swatch.style.borderRadius = '4px';
-    swatch.style.background = color;
-    swatch.style.cursor = 'pointer';
-    swatch.title = color;
-    swatch.onclick = () => {
-      selectedColor = color;
-      colorDropdown.setValue(color);
-      updateFullMarkerImage();
-    };
-    swatchRow2.dom.appendChild(swatch);
-  });
-  container.add(swatchRow2);
+  // const swatchRow2 = new UIRow();
+  // ['black', 'white', 'red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'gray'].forEach(color => {
+  //   const swatch = document.createElement('div');
+  //   swatch.style.width = '20px';
+  //   swatch.style.height = '20px';
+  //   swatch.style.margin = '2px';
+  //   swatch.style.border = '1px solid #888';
+  //   swatch.style.borderRadius = '4px';
+  //   swatch.style.background = color;
+  //   swatch.style.cursor = 'pointer';
+  //   swatch.title = color;
+  //   swatch.onclick = () => {
+  //     selectedColor = color;
+  //     colorDropdown.setValue(color);
+  //     updateFullMarkerImage();
+  //   };
+  //   swatchRow2.dom.appendChild(swatch);
+  // });
+  // container.add(swatchRow2);
+  
 
   const downloadPattern = new UIButton('Download Marker (.patt)').onClick(() => {
     if (!innerImageURL) return alert('Upload a file first');
@@ -254,12 +257,13 @@ function SidebarMarkerGenerator(editor) {
 
   container.add(resetButton);
 
-  const setPatternButton = new UIButton('Set Pattern').onClick(async () => {
-    await window.generateMarkerImage();
-    await window.generateMarkerPattern();
-  });
-  
-  container.add(setPatternButton);
+  // //Set Pattern is only needed for testing.
+  // const setPatternButton = new UIButton('Set Pattern').onClick(async () => {
+  //   await window.generateMarkerImage();
+  //   await window.generateMarkerPattern();
+  // });
+  //
+  // container.add(setPatternButton);
 
   function updateFullMarkerImage() {
     if (!innerImageURL) return;

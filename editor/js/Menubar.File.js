@@ -721,50 +721,51 @@ function MenubarFile(editor) {
 		 * @param {Object[]} filesToFetch - An array of objects containing file information (URL, name, and path).
 		 * @returns {Promise<Blob>} A promise that resolves with the generated ZIP file as a Blob.
 		 */
-		function createZip(filesToFetch) {
-			if (!Array.isArray(filesToFetch) || filesToFetch.length === 0) {
-				return Promise.reject(new Error('Invalid filesToFetch parameter. It should be a non-empty array.'));
-			}
+		//disble redundant code
+		// function createZip(filesToFetch) {
+		// 	if (!Array.isArray(filesToFetch) || filesToFetch.length === 0) {
+		// 		return Promise.reject(new Error('Invalid filesToFetch parameter. It should be a non-empty array.'));
+		// 	}
 
-			var zip = new JSZip();
+		// 	var zip = new JSZip();
 
-			return fetchFiles(filesToFetch)
-				.then(function (dataArray) {
-					dataArray.forEach(function (file) {
-						var directoryPath = file.path.trim();
-						if (directoryPath !== '') {
-							var directory = zip.folder(directoryPath);
-						}
-						console.log("directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' }: "); //Test code
-						console.log("directoryPath + file.name: " + directoryPath + file.name); //Test code
-						console.log("file.data" + file.data); //Test code
-						console.log("binary: " + (typeof file.data !== 'string')); //Test code
+		// 	return fetchFiles(filesToFetch)
+		// 		.then(function (dataArray) {
+		// 			dataArray.forEach(function (file) {
+		// 				var directoryPath = file.path.trim();
+		// 				if (directoryPath !== '') {
+		// 					var directory = zip.folder(directoryPath);
+		// 				}
+		// 				console.log("directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' }: "); //Test code
+		// 				console.log("directoryPath + file.name: " + directoryPath + file.name); //Test code
+		// 				console.log("file.data" + file.data); //Test code
+		// 				console.log("binary: " + (typeof file.data !== 'string')); //Test code
 
-						zip.file(directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' });
-					});
+		// 				zip.file(directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' });
+		// 			});
 
-					//In this case, we need to inject the generated app.json
-					//This should be abstracted out to be a function call's return.
-					console.log("toZip['app.json']"); //Test code
-					console.dir(toZip['app.json']); //Test code
+		// 			//In this case, we need to inject the generated app.json
+		// 			//This should be abstracted out to be a function call's return.
+		// 			console.log("toZip['app.json']"); //Test code
+		// 			console.dir(toZip['app.json']); //Test code
 
-					zip.file("app.json", toZip['app.json'], { binary: false });
+		// 			zip.file("app.json", toZip['app.json'], { binary: false });
 
-					//Additionally, the index.html page needed to be adjusted, so it must be added seperatly
-					console.log("toZip['index.html']"); //Test code
-					console.dir(toZip['index.html']); //Test code
+		// 			//Additionally, the index.html page needed to be adjusted, so it must be added seperatly
+		// 			console.log("toZip['index.html']"); //Test code
+		// 			console.dir(toZip['index.html']); //Test code
 
-					zip.file("index.html", toZip['index.html'], { binary: false });
+		// 			zip.file("index.html", toZip['index.html'], { binary: false });
 					
 
-					//Return the completed zip content.
-					return zip.generateAsync({ type: 'blob' });
-				})
-				.catch(function (error) {
-					// Throw error to be handled by the caller
-					throw new Error('Error creating ZIP file: ' + error.message);
-				});
-		}
+		// 			//Return the completed zip content.
+		// 			return zip.generateAsync({ type: 'blob' });
+		// 		})
+		// 		.catch(function (error) {
+		// 			// Throw error to be handled by the caller
+		// 			throw new Error('Error creating ZIP file: ' + error.message);
+		// 		});
+		// }
 
 
 		/*
@@ -772,6 +773,8 @@ function MenubarFile(editor) {
 		var filesToFetch = processDirectory(directoryStructure);
 		*/
 
+
+		
 		var filesToFetch = [
 			//{url: '../editor/files/exportFiles/index.html', name: 'index.html', path: ''}, //this file needs to be edited before it's added in
 			{ url: '../editor/files/exportFiles/data/largeLambda.patt', name: 'largeLambda.patt', path: 'data/' },
@@ -804,6 +807,40 @@ function MenubarFile(editor) {
 		]
 
 		console.dir(filesToFetch);//test code
+//The code to create the zip
+function createZip(filesToFetch) {
+  if (!Array.isArray(filesToFetch) || filesToFetch.length === 0) {
+    return Promise.reject(new Error('Invalid filesToFetch parameter. It should be a non-empty array.'));
+  }
+
+  var zip = new JSZip();
+
+  return fetchFiles(filesToFetch)
+    .then(function (dataArray) {
+      dataArray.forEach(function (file) {
+        var directoryPath = file.path.trim();
+        if (directoryPath !== '') {
+          zip.folder(directoryPath);
+        }
+
+        zip.file(directoryPath + file.name, file.data, {
+          binary: typeof file.data !== 'string'
+        });
+      });
+
+      // Inject app.json
+      zip.file("app.json", toZip['app.json'], { binary: false });
+
+      // Inject index.html
+      zip.file("index.html", toZip['index.html'], { binary: false });
+
+      return zip.generateAsync({ type: 'blob' });
+    })
+    .catch(function (error) {
+      throw new Error('Error creating ZIP file: ' + error.message);
+    });
+}
+
 
 		//Generate the marker .patt and .png then append it to the filesToFetch:
 
@@ -907,6 +944,9 @@ function MenubarFile(editor) {
 					filesToFetch.push(markerPatternFile);
 					filesToFetch.push(markerImageFile);
 
+					//Prepare the export file name...
+					const zipFileName = appTitle + ".zip";
+
 					// continue to zip...
 					createZip(filesToFetch)
 					.then(function (content) {
@@ -927,22 +967,22 @@ function MenubarFile(editor) {
 				console.warn('[Publish AR App] Required marker generation functions are missing.');
 				}
 
-
-		console.log("[Publish AR App] Reached marker configuration step");
-		configureCustomMarkerFiles();
-		console.log("[Publish AR App] Marker files configured:", markerPatternFile, markerImageFile);
-
-		
-
-		// end new ARMarker configuration code
-
-		// start new ARMarker injection
-		filesToFetch.push(markerPatternFile);
-		filesToFetch.push(markerImageFile);
-		// end new ARMarker injection
-
-		console.log("filesToFetch");//test code
-		console.dir(filesToFetch);//test code
+//Disabling redundant code
+		// console.log("[Publish AR App] Reached marker configuration step");
+		// configureCustomMarkerFiles();
+		// console.log("[Publish AR App] Marker files configured:", markerPatternFile, markerImageFile);
+		//
+		//		
+		//
+		// // end new ARMarker configuration code
+		//
+		// // start new ARMarker injection
+		// filesToFetch.push(markerPatternFile);
+		// filesToFetch.push(markerImageFile);
+		// // end new ARMarker injection
+		//
+		// console.log("filesToFetch");//test code
+		// console.dir(filesToFetch);//test code
 
 		/*
 		// start new ARMarker Generation code
@@ -983,29 +1023,32 @@ function MenubarFile(editor) {
 			});
 			*/
 
-		const zipFileName = appTitle + ".zip"
+		
+//Old code -- the new code handles the Markers better.
 
-		// Add files to the ZIP archive and generate the ZIP file
-		createZip(filesToFetch)
-			//.then(function() {
-			//	return zip.generateAsync({ type: "blob" });
-			//}) 
-			.then(function (content) {
-				// Save the ZIP file locally
-				//saveAs(content, "files.zip");
-				//Need to inject the app.json file before Ziping the file
-				//zip.file(directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' });
-				console.log("============"); //Test code
-				console.log("passed content: "); //Test code
-				console.dir(content); //Test code
-				console.log("============"); //Test code
+		// // Add files to the ZIP archive and generate the ZIP file
+		// const zipFileName = appTitle + ".zip"
+		
+		// createZip(filesToFetch)
+		// 	//.then(function() {
+		// 	//	return zip.generateAsync({ type: "blob" });
+		// 	//}) 
+		// 	.then(function (content) {
+		// 		// Save the ZIP file locally
+		// 		//saveAs(content, "files.zip");
+		// 		//Need to inject the app.json file before Ziping the file
+		// 		//zip.file(directoryPath + file.name, file.data, { binary: typeof file.data !== 'string' });
+		// 		console.log("============"); //Test code
+		// 		console.log("passed content: "); //Test code
+		// 		console.dir(content); //Test code
+		// 		console.log("============"); //Test code
 
-				save(content, zipFileName);
-				//save(content, "files.zip");
-			})
-			.catch(function (error) {
-				console.error("Error creating ZIP file:", error);
-			});
+		// 		save(content, zipFileName);
+		// 		//save(content, "files.zip");
+		// 	})
+		// 	.catch(function (error) {
+		// 		console.error("Error creating ZIP file:", error);
+		// 	});
 
 
 	});

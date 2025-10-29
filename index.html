@@ -1,179 +1,247 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <title>AR Web App</title>
-    <meta charset="utf-8">
-    <meta name="generator" content="Three.js Editor">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Augmented Reality Editor</title>
+
     <style>
+        /* Set the font family to Arial or sans-serif */
         body {
-            font-family: sans-serif;
-            font-size: 11px;
-            background-color: #b17128;
-            margin: 0px;
-            overflow: hidden; /* Turn off overflow to prevent scrollbars */
+            font-family: Arial, sans-serif;
+            /* Set the background color to a light gray */
+            background-color: #f0f0f0;
+            /* Set the text color to black */
+            color: black;
         }
 
-        canvas {
-            display: block;
-            /* Add any styles for the Three.js canvas */
+        /* Styling the heading 1 element */
+        h1 {
+            /* Set the color of heading 1 to  */
+            color: black;
         }
 
-        /* Add CSS rules for customizing the AR.js video element */
-        .arjs-video {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            /* opacity: 0.8; /* Example: set opacity to 80% */
-            /* Add any additional styling properties as needed */
+        .instructions {
+            font-family: Consolas, "Courier New", Courier, monospace;
+            background-color: #f5f5f5;
+            color: #d63384;
+            /* Optional: Choose a color that fits your design */
+            padding: 2px 4px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            /* Optional: Add a border to distinguish it */
         }
 
+        /* CSS Grid Rules */
+        .container {
+            display: grid;
+            grid-template-columns: 5% 90% 5%;
+            grid-template-rows: 5% 0.25fr 0.5fr .25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 0.25fr 5%;
+            gap: .15em 0px;
+            grid-auto-flow: row;
+            grid-template-areas:
+                "topSpacing topSpacing topSpacing"
+                "leftPading welcome rightPading"
+                "leftPading splash rightPading"
+                "leftPading instructionsHeader rightPading"
+                "leftPading instructions1A rightPading"
+                "leftPading instructions1B rightPading"
+                "leftPading instructions2A rightPading"
+                "leftPading instructions2B rightPading"
+                "leftPading instructions3A rightPading"
+                "leftPading instructions3B rightPading"
+                "leftPading spacer rightPading"
+                "leftPading outro rightPading"
+                "leftPading footer rightPading"
+                "bottomSpacing bottomSpacing bottomSpacing";
+        }
+
+        .welcome {
+            grid-area: welcome;
+            text-align: center;
+        }
+
+        .splash {
+            grid-area: splash;
+            text-align: center;
+        }
+
+        .instructionsHeader {
+            grid-area: instructionsHeader;
+        }
+
+        .instructions1A {
+            grid-area: instructions1A;
+        }
+
+        .instructions1B {
+            grid-area: instructions1B;
+        }
+
+        .instructions2A {
+            grid-area: instructions2A;
+        }
+
+        .instructions2B {
+            grid-area: instructions2B;
+        }
+
+        .instructions3A {
+            grid-area: instructions3A;
+        }
+
+        .instructions3B {
+            grid-area: instructions3B;
+        }
+
+        .spacer {
+            grid-area: spacer;
+        }
+
+        .outro {
+            grid-area: outro;
+            text-align: center;
+        }
+
+        .footer {
+            grid-area: footer;
+        }
+
+        .leftPading {
+            grid-area: leftPading;
+        }
+
+        .rightPading {
+            grid-area: rightPading;
+        }
+
+        .topSpacing {
+            grid-area: topSpacing;
+        }
+
+        .bottomSpacing {
+            grid-area: bottomSpacing;
+        }
+
+
+        /*end CSS Grid rules*/
     </style>
-    <!-- ThreeJS now uses import maps, which have only been supported since late 2021 --> 
-    <!-- Load the es-module-shims.js polyfill to ensure it works-->
-    <script type="module-shim" src="./js/es-module-shims.js"></script>
 
-    <script type="importmap">
-        {
-          "imports": {
-            "three": "./js/three.module.js",
-            "three/OrbitControls": "./js/OrbitControls.js",
-            "three/VRButton": "./js/VRButton.js"
-          }
-        }
-      </script>
-
-    <!-- include three.js library -->
-    <script src='./js/three.js'></script>
-
-    <!-- include jsartookit -->
-    <script src="./js/jsartoolkit5/artoolkit.min.js"></script>
-    <script src="./js/jsartoolkit5/artoolkit.api.js"></script>
-
-    <!-- include the ar-threex.js library, then correct the THREEx.ArtoolkitContext's Base URL-->
-    <script src="./js/ar-threex.js"></script>
-    <!-- Set Base URL for the THREEx Library to reference normally '../' -->
-    <script>THREEx.ArToolkitContext.baseURL = './js/'</script>
 </head>
-<body ontouchstart="">
-    <script type="module">
 
-    // Remove the import statement for Three.module.js since we're using the stand alone instead.
-    // import * as THREE from './js/three.module.js';        
-    import { APP } from './js/APP.js';
-        
-    import { VRButton } from './js/VRButton.js';
+<body>
 
-        window.THREE = THREE; // Used by APP Scripts.
-        window.VRButton = VRButton; // Used by APP Scripts.
+    <!-- Main content -->
 
-        var loader = new THREE.FileLoader();
-        loader.load('app.json', function (text) {
+    <div class="container">
+        <div class="welcome">
+            <div style="text-align: center">
+                <h2> Augmented Reality Editor </h2>
+            </div>
+        </div>
 
-            var player = new APP.Player();
-            player.load(JSON.parse(text));
-            player.setSize(window.innerWidth, window.innerHeight);
-            player.play();
+        <div class="splash">
+            <div style="padding-top: 5%;">
+                <div>
+                    <h4>Welcome to the Augmented Reality Editor</h4>
+                </div>
 
-            document.body.appendChild(player.dom);
-
-            window.addEventListener('resize', function () {
-
-                player.setSize(window.innerWidth, window.innerHeight);
-                console.log("RESIZE");
-
-            });
-
-        });
-
-    </script>
-    <!-- Code injected by live-server -->
-    <script>
-        // <![CDATA[  <-- For SVG support
-        if ('WebSocket' in window) {
-            (function () {
-                function refreshCSS() {
-                    var sheets = [].slice.call(document.getElementsByTagName("link"));
-                    var head = document.getElementsByTagName("head")[0];
-                    for (var i = 0; i < sheets.length; ++i) {
-                        var elem = sheets[i];
-                        var parent = elem.parentElement || head;
-                        parent.removeChild(elem);
-                        var rel = elem.rel;
-                        if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
-                            var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
-                            elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
-                        }
-                        parent.appendChild(elem);
-                    }
-                }
-                var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-                var address = protocol + window.location.host + window.location.pathname + '/ws';
-
-                if(window.location.pathname.substring(window.location.pathname.length -1) === '/' ){
-                    //windowLocationPathname.substring(0, windowLocationPathname.length -1);
-                    address = protocol + window.location.host + window.location.pathname + 'ws';
-                } else {
-                    address = protocol + window.location.host + window.location.pathname + '/ws'
-                }
-
-                console.log("address (should end in /ws): "); //test code
-                console.dir(address); //test code
+                <div style="text-align: center; padding-bottom: 5%;">
+                    <h1>
+                        <a href="editor/index.html">>> Click Here to start editing << </a>
+                    </h1>
+                </div>
+                <div>
+                    <br>
+                </div>
+                <div style="text-align: center;">
+                    <a href="images/Large Lambda AR Marker.png">Click Here to print the default AR Marker </a>
+                </div>
                 
-                var socket = new WebSocket(address);
-                socket.onmessage = function (msg) {
-                    if (msg.data == 'reload') window.location.reload();
-                    else if (msg.data == 'refreshcss') refreshCSS();
-                };
-                if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-                    console.log('Live reload enabled.');
-                    sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
-                }
-            })();
-        } else {
-            console.error('Upgrade your browser. This Browser does NOT support WebSocket for Live-Reloading.');
-        }
-        // ]]>
-    </script>
-<!-- Code injected by live-server -->
-<script>
-	// <![CDATA[  <-- For SVG support
-	if ('WebSocket' in window) {
-		(function () {
-			function refreshCSS() {
-				var sheets = [].slice.call(document.getElementsByTagName("link"));
-				var head = document.getElementsByTagName("head")[0];
-				for (var i = 0; i < sheets.length; ++i) {
-					var elem = sheets[i];
-					var parent = elem.parentElement || head;
-					parent.removeChild(elem);
-					var rel = elem.rel;
-					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
-						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
-						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
-					}
-					parent.appendChild(elem);
-				}
-			}
-			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-			var address = protocol + window.location.host + window.location.pathname + '/ws';
-			var socket = new WebSocket(address);
-			socket.onmessage = function (msg) {
-				if (msg.data == 'reload') window.location.reload();
-				else if (msg.data == 'refreshcss') refreshCSS();
-			};
-			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-				console.log('Live reload enabled.');
-				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
-			}
-		})();
-	}
-	else {
-		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
-	}
-	// ]]>
-</script>
+            </div>
+        </div>
+
+        <div class="instructionsHeader" style="padding-top: 10%;">
+            <br>
+
+            <h2>
+                instructions:
+            </h2>
+            
+        </div>
+
+        <div class="instructions1A">
+            <b>First, set up the default AR Template:</b>
+        </div>
+
+        <div class="instructions1B" style="text-align: center;">
+
+            <table role="presentation">
+                <tr>
+                  <td></td>
+                  <td class="instructions" style="text-align: center;">
+                    File > New Default Template
+                </td>
+                  <td></td>
+                </tr>
+            </table>
+              
+        </div>
+
+        <div class="instructions2A">
+            <b>Next, import your .gltf object</b>
+        </div>
+
+        <div class="instructions2B">
+            <table role="presentation">
+                <tr>
+                  <td></td>
+                  <td class="instructions" style="text-align: center;">
+                    File > Import
+                </td>
+                  <td></td>
+                </tr>
+            </table>
+        
+        </div>
+
+        <div class="instructions3A">
+            <b>Lastly, export the AR Web App as a zip file by using</b>
+        </div>
+
+        <div class="instructions3B">
+
+            <table role="presentation">
+                <tr>
+                  <td></td>
+                  <td class="instructions" style="text-align: center;">
+                    File > Publish
+                </td>
+                  <td></td>
+                </tr>
+            </table>
+
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="outro">
+
+                    This application was built using the <a href="https://threejs.org/">ThreeJS Editor</a> and the <a
+                        href="https://ar-js-org.github.io/AR.js-Docs/">ARJS Library</a>
+
+        </div>
+
+        <div class="footer"></div>
+        <div class="leftPading"></div>
+        <div class="rightPading"></div>
+        <div class="topSpacing"></div>
+        <div class="bottomSpacing"></div>
+    </div>
+
+    <!-- End Main Content -->
+
 </body>
+
 </html>

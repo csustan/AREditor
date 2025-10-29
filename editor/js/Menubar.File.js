@@ -1287,7 +1287,7 @@ option.onClick(async function () {
 			{ url: '../editor/files/ARNFTExportFiles/js/third_party/utils/ARnftUtils.js', name: 'ARnftUtils.js', path: 'js/third_party/utils/' },
 			{ url: '../editor/files/ARNFTExportFiles/js/third_party/utils/html/Container.js', name: 'Container.js', path: 'js/third_party/utils/html/' },
 			{ url: '../editor/files/ARNFTExportFiles/js/third_party/Worker.js', name: 'Worker.js', path: 'js/third_party/' },
-			{ url: '../editor/files/ARNFTExportFiles/LICENSE', name: 'LICENSE', path: '' }
+			{ url: '../editor/files/ARNFTExportFiles/LICENSE.txt', name: 'LICENSE.txt', path: '' }
 		]
 
 			console.dir(filesToFetch);//test code

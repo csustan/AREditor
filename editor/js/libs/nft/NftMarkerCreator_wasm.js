@@ -814,8 +814,8 @@ var Module = (() => {
       };
     }
     var wasmBinaryFile;
-    wasmBinaryFile = "NftMarkerCreator_wasm.wasm"; //old location
-    //wasmBinaryFile = "editor/js/libs/nft/NftMarkerCreator_wasm.wasm"; //new location
+    //wasmBinaryFile = "NftMarkerCreator_wasm.wasm"; //old location
+    wasmBinaryFile = "editor/js/libs/nft/NftMarkerCreator_wasm.wasm"; //new location
     if (!isDataURI(wasmBinaryFile)) {
       wasmBinaryFile = locateFile(wasmBinaryFile);
     }

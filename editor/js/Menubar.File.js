@@ -1220,6 +1220,24 @@ option.onClick(async function () {
 						console.log("toZipForARNFT['model.gltf']"); //Test code
 						console.dir(toZipForARNFT['model.gltf']); //Test code
 
+						// start insert compatiblity with Sidebar.NFTMarkerGenerator.js: inject generated NFT dataset files (if the sidebar created them)
+						if ( hasGeneratedNft ) {
+
+							zip.file( "DataNFT/generatedMarkerFile.iset",  window.NFT_Iset,  { binary: true } );
+							zip.file( "DataNFT/generatedMarkerFile.fset",  window.NFT_Fset,  { binary: true } );
+							zip.file( "DataNFT/generatedMarkerFile.fset3", window.NFT_Fset3, { binary: true } );
+
+							console.log( "[ARNFT] Using generated NFT dataset from sidebar (iset/fset/fset3)." );
+
+						} else {
+
+							console.log( "[ARNFT] Using default NFT dataset files from ARNFTExportFiles/DataNFT/." );
+
+						}
+						// end insert
+
+
+						//Add the model.gltf
 						zip.file("Data/models/model.gltf", toZipForARNFT['model.gltf'], { binary: false });
 
 						//Additionally, the index.html page needed to be adjusted, so it must be added separately
@@ -1256,6 +1274,13 @@ option.onClick(async function () {
 			var filesToFetch = processDirectory(directoryStructure);
 			*/
 
+			// start insert: prefer generated NFT dataset from the NFT Marker Generator sidebar (if available)
+			const hasGeneratedNft =
+				window.NFT_Iset instanceof Uint8Array &&
+				window.NFT_Fset instanceof Uint8Array &&
+				window.NFT_Fset3 instanceof Uint8Array;
+			// end insert
+
 			var filesToFetch = [
 			//{url: '../editor/files/ARNFTExportFiles/index.html', name: 'index.html', path: ''}, //this file needs to be edited before it's added in
 			{ url: '../editor/files/ARNFTExportFiles/CODE_OF_CONDUCT.md', name: 'CODE_OF_CONDUCT.md', path: '' },
@@ -1266,9 +1291,15 @@ option.onClick(async function () {
 			{ url: '../editor/files/ARNFTExportFiles/Data/camera_para.dat', name: 'camera_para.dat', path: 'Data/' },
 			{ url: '../editor/files/ARNFTExportFiles/Data/models/Model_ReadMe.txt', name: 'Model_ReadMe.txt', path: 'Data/models/' },
 			{ url: '../editor/files/ARNFTExportFiles/Data/StanState-logo.png', name: 'StanState-logo.png', path: 'Data/' },
-			{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.fset', name: 'generatedMarkerFile.fset', path: 'DataNFT/' },
+			//{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.fset', name: 'generatedMarkerFile.fset', path: 'DataNFT/' },
+			//{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.fset3', name: 'generatedMarkerFile.fset3', path: 'DataNFT/' },
+			//{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.iset', name: 'generatedMarkerFile.iset', path: 'DataNFT/' },
+			//Access the stored fset, fset3 and iset files if they are created
+			{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.fset',  name: 'generatedMarkerFile.fset',  path: 'DataNFT/' },
 			{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.fset3', name: 'generatedMarkerFile.fset3', path: 'DataNFT/' },
-			{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.iset', name: 'generatedMarkerFile.iset', path: 'DataNFT/' },
+			{ url: '../editor/files/ARNFTExportFiles/DataNFT/generatedMarkerFile.iset',  name: 'generatedMarkerFile.iset',  path: 'DataNFT/' },
+
+
 			{ url: '../editor/files/ARNFTExportFiles/favicon.ico', name: 'favicon.ico', path: 'ARNFTExportFiles/' },
 			{ url: '../editor/files/ARNFTExportFiles/img/pinball.jpg', name: 'pinball.jpg', path: 'img/' },
 			{ url: '../editor/files/ARNFTExportFiles/img/ReadMe.txt', name: 'ReadMe.txt', path: 'img/' },

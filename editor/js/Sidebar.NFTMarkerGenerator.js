@@ -411,33 +411,82 @@ function SidebarNFTMarkerGenerator(editor) {
 
 
 	// Helper: read + sanitize settings (keeps generator code clean)
+	
 	function getMarkerSettings() {
 
-		const outputName = (fileNameInput.getValue?.() ?? fileNameInput.dom?.value ?? '').trim() || 'myMarker';
+	// --- Helper functions to safely parse values ---
 
-		const dpi = Number(dpiInput.getValue?.() ?? dpiInput.dom?.value ?? 72);
-		const level = Number(levelInput.getValue?.() ?? levelInput.dom?.value ?? 2);
-		const leveli = Number(leveliInput.getValue?.() ?? leveliInput.dom?.value ?? 1);
-		const sd_thresh = Number(sdThreshInput.getValue?.() ?? sdThreshInput.dom?.value ?? 8);
-		const max_thresh = Number(maxThreshInput.getValue?.() ?? maxThreshInput.dom?.value ?? 0.9);
-		const min_thresh = Number(minThreshInput.getValue?.() ?? minThreshInput.dom?.value ?? 0.55);
-		const feature_density = Number(featureDensityInput.getValue?.() ?? featureDensityInput.dom?.value ?? 70);
-
-		return {
-			outputName,
-			options: {
-				zft: !!zftCheckbox.checked,
-				dpi: Number.isFinite(dpi) ? dpi : 72,
-				level: Number.isFinite(level) ? level : 2,
-				leveli: Number.isFinite(leveli) ? leveli : 1,
-				sd_thresh: Number.isFinite(sd_thresh) ? sd_thresh : 8,
-				max_thresh: Number.isFinite(max_thresh) ? max_thresh : 0.9,
-				min_thresh: Number.isFinite(min_thresh) ? min_thresh : 0.55,
-				feature_density: Number.isFinite(feature_density) ? feature_density : 70
-			}
-		};
-
+	function toFloat(value, fallback) {
+		const n = parseFloat(value);
+		return Number.isFinite(n) ? n : fallback;
 	}
+
+	function toInt(value, fallback) {
+		const n = parseInt(value);
+		return Number.isFinite(n) ? n : fallback;
+	}
+
+	function clamp(value, min, max) {
+		return Math.min(Math.max(value, min), max);
+	}
+
+	// --- Output name ---
+	const outputName =
+		(fileNameInput.getValue?.() ?? fileNameInput.dom?.value ?? '')
+			.trim() || 'generatedMarker';
+
+	// --- Parse numeric inputs safely ---
+	let dpi = toFloat(dpiInput.dom.value, 72);
+	let level = toInt(levelInput.dom.value, 2);
+	let leveli = toInt(leveliInput.dom.value, 1);
+	let sd_thresh = toFloat(sdThreshInput.dom.value, 8);
+	let max_thresh = toFloat(maxThreshInput.dom.value, 0.9);
+	let min_thresh = toFloat(minThreshInput.dom.value, 0.55);
+	let feature_density = toInt(featureDensityInput.dom.value, 70);
+
+	// --- Sanity constraints ---
+
+	// DPI must be positive
+	dpi = clamp(dpi, 1, 600);
+
+	// Levels must not be negative
+	level = clamp(level, 0, 5);
+	leveli = clamp(leveli, 0, 5);
+
+	// Standard deviation threshold must be positive
+	sd_thresh = clamp(sd_thresh, 1, 100);
+
+	// Feature density must be positive
+	feature_density = clamp(feature_density, 1, 1000);
+
+	// Thresholds must be between 0 and 1
+	min_thresh = clamp(min_thresh, 0.01, 0.99);
+	max_thresh = clamp(max_thresh, 0.01, 0.99);
+
+	// Enforce correct relationship
+	if (min_thresh >= max_thresh) {
+
+		console.warn("min_thresh was >= max_thresh. Resetting to safe defaults.");
+
+		min_thresh = 0.55;
+		max_thresh = 0.9;
+	}
+
+	return {
+		outputName,
+		options: {
+			zft: !!zftCheckbox.checked,
+			dpi,
+			level,
+			leveli,
+			sd_thresh,
+			max_thresh,
+			min_thresh,
+			feature_density
+		}
+	};
+}
+
 	// ---------------------------------------------------------
 	// End Generator Control Options
 	// ---------------------------------------------------------
@@ -879,23 +928,23 @@ function SidebarNFTMarkerGenerator(editor) {
 			// const outputDir = '/output'; // no longer used — generator writes to module FS cwd, keep outputBasePath as base filename
 			
 			// The generator will append extensions, so outputBasePath must be a plain base filename.
+			// Use already-sanitized output name for internal WASM generation
 			const outputBasePath = outputName;
+			//const outputBasePath = "generatedMarker"; //outputName;
+			//const outputBasePath = sanitizeOutputName(settings.outputName);
 
-
-
-			//ParamStr that uses user input
 			const paramStr =
-				`0 ${outputBasePath}` +
-				` -dpi=${options.dpi}` +
-				` -level=${options.level}` +
-				` -leveli=${options.leveli}` +
-				` -sd_thresh=${options.sd_thresh}` +
-				` -max_thresh=${options.max_thresh}` +
-				` -min_thresh=${options.min_thresh}` +
-				` -feature_density=${options.feature_density}` +
-				( options.zft ? ' -zft' : '' );
+							`0 ${outputBasePath}` +
+							` -dpi=${options.dpi}` +
+							` -level=${options.level}` +
+							` -leveli=${options.leveli}` +
+							` -sd_thresh=${options.sd_thresh}` +
+							` -max_thresh=${options.max_thresh}` +
+							` -min_thresh=${options.min_thresh}` +
+							` -feature_density=${options.feature_density}`;
 
-
+			console.log("NFT base name:", outputBasePath);
+			console.log("NFT param string:", paramStr);
 
 			if ( typeof module._createImageSet !== 'function' ) {
 				throw new Error('[NFT] _createImageSet is not exported by this build.');
@@ -907,6 +956,7 @@ function SidebarNFTMarkerGenerator(editor) {
 
 			try {
 
+				console.log("FINAL PARAM STRING:", paramStr); //test code
 				// Allocate + copy param string into WASM memory (matches the working example)
 				paramPtr = module._malloc( paramStr.length + 1 );
 
@@ -1038,9 +1088,35 @@ function SidebarNFTMarkerGenerator(editor) {
 					window.NFT_Fset  = foundFset;
 					window.NFT_Fset3 = foundFset3;
 
-				} catch (e) {
-					console.error('[NFT] Read/locate block error:', e);
-					throw e;
+					// === DEBUG: Verify dataset integrity ===
+					console.log("=== NFT DATASET DEBUG ===");
+
+					console.log("Iset instanceof Uint8Array:", window.NFT_Iset instanceof Uint8Array);
+					console.log("Fset instanceof Uint8Array:", window.NFT_Fset instanceof Uint8Array);
+					console.log("Fset3 instanceof Uint8Array:", window.NFT_Fset3 instanceof Uint8Array);
+
+					console.log("Iset length:", window.NFT_Iset?.length);
+					console.log("Fset length:", window.NFT_Fset?.length);
+					console.log("Fset3 length:", window.NFT_Fset3?.length);
+
+					try {
+						const statIset = module.FS.stat(`${outputBasePath}.iset`);
+						const statFset = module.FS.stat(`${outputBasePath}.fset`);
+						const statFset3 = module.FS.stat(`${outputBasePath}.fset3`);
+
+						console.log("FS stat iset size:", statIset.size);
+						console.log("FS stat fset size:", statFset.size);
+						console.log("FS stat fset3 size:", statFset3.size);
+					} catch (e) {
+						console.warn("FS stat failed:", e);
+					}
+
+					console.log("=== END NFT DATASET DEBUG ===");
+
+
+				} catch (error) {
+					console.error('[NFT] Read/locate block error:', error);
+					throw error;
 				}
 
 
@@ -1048,7 +1124,7 @@ function SidebarNFTMarkerGenerator(editor) {
 				// Optional: generate the zft file as a second pass so we keep the trio as well.
 				window.NFT_Zft = null;
 
-				if ( options.zft ) {
+				if ( options.zft && true && false ) {
 
 					// Use a different base path so the second run cannot interfere with the trio file names.
 					const zftOutputBasePath = `${outputBasePath}_zft`;

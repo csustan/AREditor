@@ -31,11 +31,11 @@ function Sidebar( editor ) {
 	container.addTab( 'scene', strings.getKey( 'sidebar/scene' ), scene );
 	container.addTab( 'project', strings.getKey( 'sidebar/project' ), project );
 	container.addTab( 'settings', strings.getKey( 'sidebar/settings' ), settings );
-	container.select( 'scene' );
 	container.addTab('nft', 'NFT Marker Generator', nftGenerator); //Calling the Natural Feature Marker Generator
 	container.addTab('marker', 'Marker Generator', markerGenerator); //Calling the marker generator
 	
-
+	// Force Scene tab to be selected after all tabs are registered
+	container.select( 'scene' );
 
 	return container;
 

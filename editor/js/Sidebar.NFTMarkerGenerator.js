@@ -934,14 +934,15 @@ function SidebarNFTMarkerGenerator(editor) {
 			//const outputBasePath = sanitizeOutputName(settings.outputName);
 
 			const paramStr =
-							`0 ${outputBasePath}` +
-							` -dpi=${options.dpi}` +
-							` -level=${options.level}` +
-							` -leveli=${options.leveli}` +
-							` -sd_thresh=${options.sd_thresh}` +
-							` -max_thresh=${options.max_thresh}` +
-							` -min_thresh=${options.min_thresh}` +
-							` -feature_density=${options.feature_density}`;
+                `0 ${outputBasePath}` +
+                ` -dpi=${options.dpi}` +
+                ` -level=${options.level}` +
+                ` -leveli=${options.leveli}` +
+                ` -sd_thresh=${options.sd_thresh}` +
+                ` -max_thresh=${options.max_thresh}` +
+                ` -min_thresh=${options.min_thresh}` +
+                ` -feature_density=${options.feature_density}` +
+                ( options.zft ? ' -zft' : '' );
 
 			console.log("NFT base name:", outputBasePath);
 			console.log("NFT param string:", paramStr);
@@ -1083,10 +1084,36 @@ function SidebarNFTMarkerGenerator(editor) {
 						throw new Error('[NFT] Generated files not found in module FS (look above for listings).');
 					}
 
-					// Assign the located buffers to the globals
+					// Assign the located buffers to the globals for the three NFT Marker files
 					window.NFT_Iset  = foundIset;
 					window.NFT_Fset  = foundFset;
 					window.NFT_Fset3 = foundFset3;
+
+					// Do the same for the ZFT file -- be sure that's generated in the same pass when -zft is included
+					window.NFT_Zft = null;
+
+					if ( options.zft ) {
+
+						const zftCandidates = [
+							`${outputBasePath}.zft`,
+							`./${outputBasePath}.zft`,
+							`/${outputBasePath}.zft`,
+							`/output/${outputBasePath}.zft`,
+							`/tmp/${outputBasePath}.zft`
+						];
+
+						for ( const candidatePath of zftCandidates ) {
+
+							const zftFile = tryRead( candidatePath );
+
+							if ( zftFile ) {
+								window.NFT_Zft = zftFile;
+								break;
+							}
+
+						}
+
+					} //end ZFT creation/export
 
 					// === DEBUG: Verify dataset integrity ===
 					console.log("=== NFT DATASET DEBUG ===");
@@ -1124,78 +1151,7 @@ function SidebarNFTMarkerGenerator(editor) {
 				// Optional: generate the zft file as a second pass so we keep the trio as well.
 				window.NFT_Zft = null;
 
-				if ( options.zft && true && false ) {
-
-					// Use a different base path so the second run cannot interfere with the trio file names.
-					const zftOutputBasePath = `${outputBasePath}_zft`;
-
-					const paramStrForZft =
-						`0 ${zftOutputBasePath}` +
-						` -dpi=${options.dpi}` +
-						` -level=${options.level}` +
-						` -leveli=${options.leveli}` +
-						` -sd_thresh=${options.sd_thresh}` +
-						` -max_thresh=${options.max_thresh}` +
-						` -min_thresh=${options.min_thresh}` +
-						` -feature_density=${options.feature_density}` +
-						' -zft';
-
-					// Allocate and write the second parameter string into WASM memory
-					const paramPtrForZft = module._malloc( paramStrForZft.length + 1 );
-					try {
-
-						module.writeStringToMemory( paramStrForZft, paramPtrForZft );
-
-						// Run generator again to produce the zft file
-						module._createImageSet(
-							heapPtr,
-							options.dpi,
-							imgData.width,
-							imgData.height,
-							3,
-							paramPtrForZft
-						);
-
-						// Give the Emscripten in-memory file system time to finish writing generated files
-						// before attempting to read them from JavaScript.
-						await new Promise( ( resolve ) => setTimeout( resolve, 300 ) );
-
-						// Debug: list the current working directory and its contents.
-						// We chdir'd into /output earlier, so '.' should show the generated files.
-						// Also attempt to list /output explicitly in case cwd wasn't changed as expected.
-						try {
-							console.log('[NFT] FS cwd:', module.FS.cwd());
-							console.log('[NFT] FS cwd contents:', module.FS.readdir('.'));
-						} catch (e) {
-							console.warn('[NFT] Unable to list current working directory contents.', e);
-						}
-
-						try {
-							console.log('[NFT] FS /output listing attempt:', module.FS.readdir('/output'));
-						} catch (e) {
-							// Not fatal — just log for diagnosis
-							console.warn('[NFT] Unable to list /output directory (may not exist yet or cwd differs).', e);
-						}
-
-
-						// zft output (additive)
-						//window.NFT_Zft = module.FS.readFile( `${zftOutputBasePath}.zft` );
-						// Try to read zft from common locations without throwing errors
-						window.NFT_Zft =
-							tryRead( `${zftOutputBasePath}.zft` ) ||
-							tryRead( `./${zftOutputBasePath}.zft` ) ||
-							tryRead( `/${zftOutputBasePath}.zft` ) ||
-							tryRead( `/output/${zftOutputBasePath}.zft` ) ||
-							tryRead( `/tmp/${zftOutputBasePath}.zft` );
-
-
-					} finally {
-
-						module._free( paramPtrForZft );
-
-					}
-
-				}// This closes: if ( options.zft ) { ... }
+				
 
 
 

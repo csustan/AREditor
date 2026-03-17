@@ -1181,11 +1181,21 @@ option.onClick(async function () {
 			 * @returns {Promise<Array<{name: string, path: string, data: Blob|ArrayBuffer}>>} A promise that resolves with an array of fetched data.
 			 */
 			function fetchFilesForARNFT(files) {
+
 				return Promise.all(files.map(function (file) {
+
+					// If the file already has in-memory data, do not fetch it from a URL.
+					if (file.data) {
+						return Promise.resolve(file);
+					}
+
+					// Otherwise fetch it from the provided URL.
 					return fetchData(file.url).then(function (data) {
 						return { name: file.name, path: file.path, data: data };
 					});
+
 				}));
+
 			}
 
 			/**
@@ -1281,6 +1291,10 @@ option.onClick(async function () {
 				window.NFT_Fset3 instanceof Uint8Array;
 			// end insert
 
+			//Start insert - detect if there's a unique image aka if the NFT marker generator also produced a preview image blob.
+			const hasGeneratedNftImage = window.NFT_ImageBlob instanceof Blob;
+			//End insert
+
 			var filesToFetch = [
 			//{url: '../editor/files/ARNFTExportFiles/index.html', name: 'index.html', path: ''}, //this file needs to be edited before it's added in
 			{ url: '../editor/files/ARNFTExportFiles/CODE_OF_CONDUCT.md', name: 'CODE_OF_CONDUCT.md', path: '' },
@@ -1302,6 +1316,8 @@ option.onClick(async function () {
 
 			{ url: '../editor/files/ARNFTExportFiles/favicon.ico', name: 'favicon.ico', path: 'ARNFTExportFiles/' },
 			{ url: '../editor/files/ARNFTExportFiles/img/pinball.jpg', name: 'pinball.jpg', path: 'img/' },
+			// Bring in the generated NFT marker preview image when available; otherwise fall back to the default pinball image.
+			hasGeneratedNftImage ? { name: 'NFTMarker.png', path: 'img/', data: window.NFT_ImageBlob } : { url: '../editor/files/ARNFTExportFiles/img/pinball.jpg', name: 'NFTMarker.png', path: 'img/' },
 			{ url: '../editor/files/ARNFTExportFiles/img/ReadMe.txt', name: 'ReadMe.txt', path: 'img/' },
 			{ url: '../editor/files/ARNFTExportFiles/js/ARnftThreejs.js', name: 'ARnftThreejs.js', path: 'js/' },
 			{ url: '../editor/files/ARNFTExportFiles/js/cameraViewRenderer.js', name: 'cameraViewRenderer.js', path: 'js/' },
@@ -1348,6 +1364,18 @@ option.onClick(async function () {
 				.catch(function (error) {
 					console.error("Error creating ZIP file:", error);
 				});
+
+				// Log whether the NFT reference image came from the generator or the fallback template file.
+				if ( hasGeneratedNftImage ) {
+
+					console.log( "[ARNFT] Using generated NFT marker preview image as img/NFTMarker.png." );
+
+				} else {
+
+					console.log( "[ARNFT] Using fallback NFT reference image as img/NFTMarker.png." );
+
+				}
+
 		});
 	}, undefined, {
 		binary: false,

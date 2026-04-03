@@ -47,60 +47,73 @@ let sharedMarkerImageDataURL = null;
 window.getSharedMarkerPattern = () => sharedMarkerPattern;
 window.getSharedMarkerImageDataURL = () => sharedMarkerImageDataURL;
 
+//Update the marker generator preview image whenever a new marker image is generated.
+function updateMarkerPreviewImage(markerUrl) {
+  if (!window._markerPreviewImage) return;
+
+  const img = window._markerPreviewImage;
+  img.src = '';
+  requestAnimationFrame(() => {
+    img.src = markerUrl;
+    img.style.display = 'block';
+  });
+}
+
+//If the default template marker plane exists in the scene, update its material to match the current generated marker image.
+function syncDefaultMarkerPlaneTexture(markerUrl) {
+  const editor = window._editor;
+  const markerPlane = editor?.scene?.getObjectByName?.('DefaultMarkerPlaneForScale'); //Look for the default marker plane in the current editor scene.
+
+  if (!markerPlane || !markerPlane.material) return; //Stop here if the default marker plane is not present or does not have a material yet.
+
+  const textureLoader = new window.THREE.TextureLoader(); //Create a texture loader so the generated marker image can be loaded into the plane material.
+  textureLoader.load(markerUrl, (texture) => { //Load the current generated marker image from its URL.
+    markerPlane.material.map = texture; //Assign the loaded texture to the default marker plane material.
+    markerPlane.material.needsUpdate = true; //Flag the material so Three.js redraws it with the new texture.
+    editor.signals.objectChanged.dispatch(markerPlane); //Notify the editor that the marker plane object has changed.
+    editor.signals.materialChanged.dispatch(markerPlane.material); //Notify the editor that the marker plane material has changed.
+    editor.signals.sceneGraphChanged.dispatch(); //Refresh the scene graph so the editor UI stays in sync.
+  });
+}
+
+//Keep the generated marker image in one place so the preview image, shared export state, and default template plane all stay synchronized.
+function applyGeneratedMarkerImage(markerUrl) {
+  fullMarkerURL = markerUrl;
+  sharedMarkerImageDataURL = markerUrl;
+  updateMarkerPreviewImage(markerUrl);
+  syncDefaultMarkerPlaneTexture(markerUrl);
+}
+
 // --- Global Generator Functions (used by Menubar.File.js) ---
-window.generateMarkerImage = async function generateMarkerImage() {
-  return new Promise((resolve) => {
-    const fallbackImage = extractSceneBackgroundAsDataURL();
-    const imageSource = innerImageURL || fallbackImage;
+	window.generateMarkerImage = async function generateMarkerImage() {
+	  return new Promise((resolve) => {
+	    const fallbackImage = extractSceneBackgroundAsDataURL();
+	    const imageSource = innerImageURL || fallbackImage;
 
     const ratio = window._markerPatternRatio?.getValue?.() ?? 0.5;
     const size = window._markerImageSize?.getValue?.() ?? 512;
     const color = selectedColor;
 
-    THREEx.ArPatternFile.buildFullMarker(imageSource, ratio, size, color, (markerUrl) => {
-      fullMarkerURL = markerUrl;
-      sharedMarkerImageDataURL = markerUrl;
+	    THREEx.ArPatternFile.buildFullMarker(imageSource, ratio, size, color, (markerUrl) => {
+	      applyGeneratedMarkerImage(markerUrl);
+	      console.log('[Generator] Marker image (with border) generated.');
+	      resolve();
+	    });
+	  });
+	};
 
-      if (window._markerPreviewImage) {
+	window.generateMarkerPattern = async function generateMarkerPattern() {
+	  return new Promise((resolve) => {
+	    const fallbackImage = extractSceneBackgroundAsDataURL();
+	    const imageSource = innerImageURL || fallbackImage;
 
-
-        const img = window._markerPreviewImage;
-        img.src = '';
-        requestAnimationFrame(() => {
-          img.src = markerUrl;
-          img.style.display = 'block';
-        });
-
-        //window._markerPreviewImage.src = markerUrl;
-        
-        // Force browsers that cashe URLs to reload the image by appending a "cache buster" value that is meaningless.
-        //previewImage.src = '';
-        //requestAnimationFrame(() => {
-        //  previewImage.src = markerUrl;
-        //});
-        //window._markerPreviewImage.src = markerUrl + '?v=' + Date.now(); 
-        
-       // window._markerPreviewImage.style.display = 'block';
-      }
-
-      console.log('[Generator] Marker image (with border) generated.');
-      resolve();
-    });
-  });
-};
-
-window.generateMarkerPattern = async function generateMarkerPattern() {
-  return new Promise((resolve) => {
-    const fallbackImage = extractSceneBackgroundAsDataURL();
-    const imageSource = innerImageURL || fallbackImage;
-
-    THREEx.ArPatternFile.encodeImageURL(imageSource, (patternFileString) => {
-      sharedMarkerPattern = patternFileString;
-      console.log('[Generator] Marker pattern (no border) generated.');
-      resolve();
-    });
-  });
-};
+	    THREEx.ArPatternFile.encodeImageURL(imageSource, (patternFileString) => {
+	      sharedMarkerPattern = patternFileString;
+	      console.log('[Generator] Marker pattern (no border) generated.');
+	      resolve();
+	    });
+	  });
+	};
 
 // --- Utility: extract fallback background image ---
 function extractSceneBackgroundAsDataURL() {
@@ -248,11 +261,13 @@ function SidebarMarkerGenerator(editor) {
   container.add(pdf2);
   container.add(pdf6);
 
-  const resetButton = new UIButton('Reset to Scene Background').onClick(() => {
-    innerImageURL = extractSceneBackgroundAsDataURL();
-    imageName = 'scene-background';
+  const resetButton = new UIButton('Reset to Default Marker').onClick(async () => {
+    innerImageURL = defaultMarkerURL;
+    imageName = 'default-marker';
     fullMarkerURL = null; // Force regenerate on reset
     updateFullMarkerImage();
+    await window.generateMarkerImage();
+    await window.generateMarkerPattern();
   });
 
   container.add(resetButton);
@@ -281,18 +296,7 @@ function SidebarMarkerGenerator(editor) {
     });
 
     THREEx.ArPatternFile.buildFullMarker(innerImageURL, ratio, size, color, (markerUrl) => {
-      fullMarkerURL = markerUrl;
-      //previewImage.src = markerUrl;
-      // Force browsers that cashe URLs to reload the image by appending a "cache buster" value that is meaningless.
-      
-      //previewImage.src = markerUrl + '?v=' + Date.now();
-      //previewImage.style.display = 'block';
-      previewImage.src = ''; // Clear first
-      requestAnimationFrame(() => {
-        previewImage.src = markerUrl;
-        previewImage.style.display = 'block';
-      });
-      
+      applyGeneratedMarkerImage(markerUrl);
     });
   }
 

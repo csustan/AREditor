@@ -51,6 +51,16 @@ function MenubarFile(editor) {
 			// Create a mesh using the plane geometry and material
 			const markerPlane = new THREE.Mesh(markerPlaneGeometry, markerMaterial);
 
+			//If the Marker Generator already has a custom generated marker image,
+			//use it here so the default template plane matches the current marker state.
+			const sharedMarkerImageDataURL = getSharedMarkerImageDataURL?.();
+			if (sharedMarkerImageDataURL) {
+				markerTextureLoader.load(sharedMarkerImageDataURL, function (texture) {
+					markerPlane.material.map = texture;
+					markerPlane.material.needsUpdate = true;
+				});
+			}
+
 			//Add a "isPreloaded" tag to filter tag the mesh to be filtered out at export
 			//markerPlane.isPreloaded = true;
 
@@ -848,14 +858,14 @@ function createZip(filesToFetch) {
 		let markerPatternFile;
 		let markerImageFile;
 
-		function configureCustomMarkerFiles() {
-			
-			try {
-				const customPatt = getSharedMarkerPattern?.();
-				const customPng = getSharedMarkerImageDataURL?.();
+			function configureCustomMarkerFiles() {
+				
+				try {
+					const customPatt = getSharedMarkerPattern?.();
+					const customPng = getSharedMarkerImageDataURL?.();
 
-				console.log("customPatt:"); // test code
-				console.dir(customPatt); // test code
+					console.log("customPatt:"); // test code
+					console.dir(customPatt); // test code
 
 				console.log("customPng:"); // test code
 				console.dir(customPng); // test code
@@ -925,47 +935,47 @@ function createZip(filesToFetch) {
 		
 		}
 
-		console.log("[Publish AR App] Generating AR Marker Assets...");
+			console.log("[Publish AR App] Generating AR Marker Assets...");
 
 
 
-		await generateMarkerImage();   // must come first to get the framed PNG
-		await generateMarkerPattern(); // then generate the pattern without frame
+			await generateMarkerImage();   // must come first to get the framed PNG
+			await generateMarkerPattern(); // then generate the pattern without frame
 
-			if (typeof generateMarkerImage === 'function' && typeof generateMarkerPattern === 'function') {
-				Promise.all([
-					generateMarkerImage(),   // With border (PNG)
-					generateMarkerPattern()  // Without border (.patt)
-				]).then(() => {
-					console.log("[Publish AR App] Marker files generated. Proceeding to configuration.");
-					configureCustomMarkerFiles(); // <-- now safe to call AFTER marker files exist
+				if (typeof generateMarkerImage === 'function' && typeof generateMarkerPattern === 'function') {
+					Promise.all([
+						generateMarkerImage(),   // With border (PNG)
+						generateMarkerPattern()  // Without border (.patt)
+					]).then(() => {
+						console.log("[Publish AR App] Marker files generated. Proceeding to configuration.");
+						configureCustomMarkerFiles(); // <-- now safe to call AFTER marker files exist
 
-					// inject into filesToFetch, etc...
-					filesToFetch.push(markerPatternFile);
-					filesToFetch.push(markerImageFile);
+						// inject into filesToFetch, etc...
+						filesToFetch.push(markerPatternFile);
+						filesToFetch.push(markerImageFile);
 
-					//Prepare the export file name...
-					const zipFileName = appTitle + ".zip";
+						//Prepare the export file name...
+						const zipFileName = appTitle + ".zip";
 
-					// continue to zip...
-					createZip(filesToFetch)
-					.then(function (content) {
-						console.log("============");
-						console.log("passed content: ");
-						console.dir(content);
-						console.log("============");
+						// continue to zip...
+						createZip(filesToFetch)
+						.then(function (content) {
+							console.log("============");
+							console.log("passed content: ");
+							console.dir(content);
+							console.log("============");
 
-						save(content, zipFileName);
-					})
-					.catch(function (error) {
-						console.error("Error creating ZIP file:", error);
+							save(content, zipFileName);
+						})
+						.catch(function (error) {
+							console.error("Error creating ZIP file:", error);
+						});
+					}).catch((error) => {
+						console.error("Marker generation failed:", error);
 					});
-				}).catch((error) => {
-					console.error("Marker generation failed:", error);
-				});
-				} else {
-				console.warn('[Publish AR App] Required marker generation functions are missing.');
-				}
+					} else {
+					console.warn('[Publish AR App] Required marker generation functions are missing.');
+					}
 
 //Disabling redundant code
 		// console.log("[Publish AR App] Reached marker configuration step");

@@ -11,6 +11,83 @@ import { AddObjectCommand } from './commands/AddObjectCommand.js'; //needed for 
 //import { saveAs } from './libs/FileSaver.js';
 import { UIPanel, UIRow, UIHorizontalRule } from './libs/ui.js';
 
+// Use one shared name so that the "default template" and export filter will stay in sync.
+const DEFAULT_MARKER_PLANE_NAME = 'DefaultMarkerPlaneForScale';
+
+// Removes the named "editor-only" objects from a cloned export payload *before* the app.json is written.
+function removeNamedObjectsFromExportData(data, objectNamesToRemove) {
+
+	// Keep the requested names in an array.
+	const namesToRemove = objectNamesToRemove || [];
+	// Track any removed object UUIDs in a plain array so related script entries can also be removed.
+	const removedUUIDs = [];
+	// Clone the serialized export data so this function never mutates the live editor state (don't mess with the artist's envireoment).
+	const clonedData = JSON.parse(JSON.stringify(data));
+
+	// Walk the serialized scene tree recursively and remove matching children by name.
+	function stripChildren(node) {
+
+		// Ignore any missing or non-object nodes during the recursive walk.
+		if (!node || typeof node !== 'object') return node;
+
+		// Only process the nodes that actually have serialized children.
+		if (Array.isArray(node.children)) {
+
+			// Rebuild the children list, but without any objects whose names match the removal list.
+			node.children = node.children
+				.filter(function (child) {
+
+					// Check whether this child is one of the named helper objects in the remove list.
+					const shouldRemove = child && namesToRemove.includes(child.name);
+
+					// Save the UUID before removal so any matching script entries can be deleted later.
+					if (shouldRemove && child.uuid && removedUUIDs.includes(child.uuid) === false) {
+
+						// Store the UUID of the object that was removed.
+						removedUUIDs.push(child.uuid);
+
+					}
+
+					// Keep every child *except* for the named helper objects that were marked for removal.
+					return !shouldRemove;
+
+				})
+				// Continue recursively through all remaining children in the export tree.
+				.map(stripChildren);
+
+		}
+
+		// Return the processed node so recursion can continue upward unchanged.
+		return node;
+
+	}
+
+	// editor.toJSON() wraps the actual scene graph under scene.object.
+	if (clonedData.scene && clonedData.scene.object) {
+
+		// Start the recursive removal walk at the root serialized scene object.
+		stripChildren(clonedData.scene.object);
+
+	}
+
+	// Store the script entries separately from the scene graph in the editor exports.
+	if (clonedData.scripts && typeof clonedData.scripts === 'object') {
+
+		// Remove any script "bucket" that belongs to an object stripped from the export.
+		for (const uuid of removedUUIDs) {
+
+			// Delete the removed object's script entry so the export stays internally consistent.
+			delete clonedData.scripts[uuid];
+
+		}
+
+	}
+
+	// Return the cleaned export payload for Publish AR Marker App to save into app.json.
+	return clonedData;
+
+}
+
 function MenubarFile(editor) {
 
 	const config = editor.config;
@@ -65,7 +142,8 @@ function MenubarFile(editor) {
 			//markerPlane.isPreloaded = true;
 
 			//Name the plane something that can be tracked:
-			markerPlane.name = "DefaultMarkerPlaneForScale"
+			// Give the marker plane a stable name so the publish step can remove it from exports only.
+			markerPlane.name = DEFAULT_MARKER_PLANE_NAME;
 
 			// Rotate the plane to make it face up (parallel to the ground)
 			markerPlane.rotation.x = -Math.PI / 2;
@@ -543,6 +621,8 @@ function MenubarFile(editor) {
 
 		//prepare to build the app.json file for export
 		let output = editor.toJSON();
+		// Strip the editor-only default marker plane from the exported app data, but not from the live scene.
+		output = removeNamedObjectsFromExportData(output, [DEFAULT_MARKER_PLANE_NAME]);
 		output.metadata.type = 'App';
 		delete output.history;
 

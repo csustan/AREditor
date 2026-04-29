@@ -1221,12 +1221,23 @@ option.onClick(async function () {
 		toZipForARNFT['model.gltf'] = gltfString;
 
 		const appTitle = config.getKey('project/title') || 'AR Natural Feature Tracker Web App';
+		//handle lighitng and other render settings for the ARNFT publish
+		const rendererSettingsForARNFT = [
+			`"outputEncoding": THREE.sRGBEncoding,`,
+			`"outputColorSpace": THREE.SRGBColorSpace,`,
+			`"shadowMapEnabled": ${config.getKey('project/renderer/shadows') === true},`,
+			`"shadowMapType": ${Number(config.getKey('project/renderer/shadowType') ?? 1)},`,
+			`"toneMapping": ${Number(config.getKey('project/renderer/toneMapping') ?? 0)},`,
+			`"toneMappingExposure": ${Number(config.getKey('project/renderer/toneMappingExposure') ?? 1)},`,
+			`"addDefaultAmbientLight": false`
+		].join('\n                            ');
 
 		//Adjust the template index.html to have the corrected title, etc.
 		const loader = new THREE.FileLoader();
 		loader.load('../editor/files/ARNFTExportFiles/index.html', function (content) {
 
 			content = content.replace('<!-- title -->', appTitle);
+			content = content.replace('//<!-- renderer settings -->', rendererSettingsForARNFT);
 
 			const theNFTModelName = "model";
 

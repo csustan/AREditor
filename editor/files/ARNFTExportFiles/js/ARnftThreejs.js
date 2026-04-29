@@ -60,6 +60,28 @@ var SceneRendererTJS = /*#__PURE__*/function () {
       logarithmicDepthBuffer: configData.renderer.logarithmicDepthBuffer
     });
     this.renderer.setPixelRatio(window.devicePixelRatio);
+	//Handle lighting and other settings
+    if (configData.renderer.outputEncoding !== undefined) {
+      this.renderer.outputEncoding = configData.renderer.outputEncoding;
+    }
+    if (configData.renderer.outputColorSpace !== undefined) {
+      this.renderer.outputColorSpace = configData.renderer.outputColorSpace;
+    }
+    if (configData.renderer.shadowMapEnabled !== undefined) {
+      this.renderer.shadowMap.enabled = configData.renderer.shadowMapEnabled;
+    }
+    if (configData.renderer.shadowMapType !== undefined) {
+      this.renderer.shadowMap.type = configData.renderer.shadowMapType;
+    }
+    if (configData.renderer.toneMapping !== undefined) {
+      this.renderer.toneMapping = configData.renderer.toneMapping;
+    }
+    if (configData.renderer.toneMappingExposure !== undefined) {
+      this.renderer.toneMappingExposure = configData.renderer.toneMappingExposure;
+    }
+    if (configData.renderer.useLegacyLights !== undefined) {
+      this.renderer.useLegacyLights = configData.renderer.useLegacyLights;
+    }
     this.scene = new three__WEBPACK_IMPORTED_MODULE_3__.Scene();
     SceneRendererTJS.globalScene = this.scene;
     if (cameraBool === true) {
@@ -79,8 +101,10 @@ var SceneRendererTJS = /*#__PURE__*/function () {
         _utils_Utils__WEBPACK_IMPORTED_MODULE_4__.Utils.setMatrix(_this.camera.projectionMatrix, ev.detail.proj);
       });
       this.scene.add(this.camera);
-      var light = new three__WEBPACK_IMPORTED_MODULE_3__.AmbientLight(0xffffff);
-      this.scene.add(light);
+      if (this.configData.renderer.addDefaultAmbientLight === true) {
+        var light = new three__WEBPACK_IMPORTED_MODULE_3__.AmbientLight(this.configData.renderer.defaultAmbientLightColor !== undefined ? this.configData.renderer.defaultAmbientLightColor : 0xffffff, this.configData.renderer.defaultAmbientLightIntensity !== undefined ? this.configData.renderer.defaultAmbientLightIntensity : 1);
+        this.scene.add(light);
+      }
       this.target.addEventListener("getWindowSize", function (_ev) {
         _this.renderer.setSize(_ev.detail.sw, _ev.detail.sh);
       });

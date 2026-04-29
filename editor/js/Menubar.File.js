@@ -88,6 +88,45 @@ function removeNamedObjectsFromExportData(data, objectNamesToRemove) {
 
 }
 
+// Removes the named "editor-only" objects from a cloned THREE.Scene *before* GLTF export is written.
+function createSceneCloneWithoutNamedObjects(scene, objectNamesToRemove) {
+
+	// Clone the live scene so export cleanup never changes the editor's working scene.
+	const sceneClone = scene.clone(true);
+	// Keep the requested names in an array so matching stays consistent with the JSON export helper.
+	const namesToRemove = objectNamesToRemove || [];
+	// Queue the matching objects first so scene traversal is not disrupted while removing them.
+	const objectsToRemove = [];
+
+	// Walk the cloned scene and collect every object whose name is on the removal list.
+	sceneClone.traverse(function (object) {
+
+		// Queue only the named helper objects that should be removed from the exported clone.
+		if (namesToRemove.includes(object.name)) {
+
+			objectsToRemove.push(object);
+
+		}
+
+	});
+
+	// Remove the queued objects from the cloned scene only.
+	objectsToRemove.forEach(function (object) {
+
+		// Skip anything that no longer has a parent by the time removal runs.
+		if (object.parent) {
+
+			object.parent.remove(object);
+
+		}
+
+	});
+
+	// Return the cleaned clone for exporters such as GLTFExporter.
+	return sceneClone;
+
+}
+
 function MenubarFile(editor) {
 
 	const config = editor.config;
@@ -1169,9 +1208,10 @@ option.onClick(async function () {
 	const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
 
 	const exporter = new GLTFExporter();
+	const sceneToExportForARNFT = createSceneCloneWithoutNamedObjects(editor.scene, [DEFAULT_MARKER_PLANE_NAME]);
 
 	// Export the scene as GLTF (non-binary)
-	exporter.parse(editor.scene, function (gltfOutput) {
+	exporter.parse(sceneToExportForARNFT, function (gltfOutput) {
 
 		//Step 1: Stringify the GLTF result
 		// This gltfOutput is a plain JS object — you can JSON.stringify it
@@ -1469,7 +1509,7 @@ option.onClick(async function () {
 		});
 	}, undefined, {
 		binary: false,
-		animations: getAnimations(editor.scene)
+		animations: getAnimations(sceneToExportForARNFT)
 	});
 });
 

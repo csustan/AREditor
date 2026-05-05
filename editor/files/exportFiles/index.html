@@ -82,7 +82,7 @@
             window.addEventListener('resize', function () {
 
                 player.setSize(window.innerWidth, window.innerHeight);
-                console.log("RESIZE");
+                // console.log("RESIZE");
 
             });
 
@@ -119,8 +119,8 @@
                     address = protocol + window.location.host + window.location.pathname + '/ws'
                 }
 
-                console.log("address (should end in /ws): "); //test code
-                console.dir(address); //test code
+                // console.log("address (should end in /ws): "); //test code
+                // console.dir(address); //test code
                 
                 var socket = new WebSocket(address);
                 socket.onmessage = function (msg) {
@@ -128,7 +128,7 @@
                     else if (msg.data == 'refreshcss') refreshCSS();
                 };
                 if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-                    console.log('Live reload enabled.');
+                    // console.log('Live reload enabled.');
                     sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
                 }
             })();

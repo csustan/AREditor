@@ -116,7 +116,7 @@ var APP = {
         //Start new resize
         function onResize() {
 
-            console.log("Activating function onResize()");
+            // console.log("Activating function onResize()");
 
             // Check if all necessary components are ready before resizing
             if (globalVar.rendererReadyFlag && globalVar.arMarkerControlsFlag && globalVar.arToolkitContextReadyFlag) {
@@ -236,8 +236,8 @@ var APP = {
 
 
             //test code:
-            console.log("globalVar.markerRoot"); //test code
-            console.dir(globalVar.markerRoot); //test code
+            // console.log("globalVar.markerRoot"); //test code
+            // console.dir(globalVar.markerRoot); //test code
 
             // Check if there is a camera in the loaded scene
             var cameras = loadedScene.cameras;
@@ -272,8 +272,8 @@ var APP = {
 
             // Initialize AR.js source
             if (globalVar.arToolkitSource) {
-                console.log("globalVar.arToolkitSource detected: ");
-                console.dir(globalVar.arToolkitSource);
+                // console.log("globalVar.arToolkitSource detected: ");
+                // console.dir(globalVar.arToolkitSource);
                 globalVar.arToolkitSource.init(function onReady() {
 
                     // Initialize AR.js context
@@ -299,7 +299,7 @@ var APP = {
 
                         // Initialize AR.js source
 
-                        console.log("delayed onresize");
+                        // console.log("delayed onresize");
                         setTimeout(function () {
 
                             onResize(); // Call the onResize function here
@@ -435,7 +435,7 @@ var APP = {
 
             // Update AR.js source dimensions on resize
             if (globalVar.arToolkitSource && globalVar.arToolkitSource.domElement && globalVar.arToolkitContext && globalVar.arToolkitContext.arController) {
-                console.log("activating resize");
+                // console.log("activating resize");
                 globalVar.arToolkitSource.onResizeElement();
                 globalVar.arToolkitSource.copyElementSizeTo(globalVar.renderer.domElement);
                 //arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);

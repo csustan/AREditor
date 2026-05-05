@@ -354,7 +354,7 @@ function Strings( config ) {
 			'toolbar/translate': 'Translate',
 			'toolbar/rotate': 'Rotate',
 			'toolbar/scale': 'Scale',
-			'toolbar/local': 'Local',
+			'toolbar/local': 'Transform space: checked = local, unchecked = world',
 
 			'viewport/info/objects': 'Objects',
 			'viewport/info/vertices': 'Vertices',

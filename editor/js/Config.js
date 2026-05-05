@@ -18,6 +18,7 @@ function Config() {
 		'project/renderer/toneMappingExposure': 1,
 
 		'settings/history': false,
+		'settings/viewport/lightingPreview': 'off',
 
 		'settings/shortcuts/translate': 'w',
 		'settings/shortcuts/rotate': 'e',

@@ -35,6 +35,76 @@ function Viewport( editor ) {
 
 	let renderer = null;
 	let pmremGenerator = null;
+	let rendererDefaultOutputEncoding;
+	let rendererDefaultOutputColorSpace;
+	let rendererDefaultUseLegacyLights;
+	let isDarkMode = false;
+
+	function applyViewportLightingPreview() {
+
+		if ( renderer === null ) return;
+
+		const lightingPreview = editor.viewportLightingPreview;
+		let outputColorSpace = rendererDefaultOutputColorSpace;
+		let outputEncoding = rendererDefaultOutputEncoding;
+		let useLegacyLights = rendererDefaultUseLegacyLights;
+
+		switch ( lightingPreview ) {
+
+			case 'nft':
+				outputColorSpace = THREE.SRGBColorSpace;
+				outputEncoding = THREE.sRGBEncoding;
+				useLegacyLights = true;
+				break;
+
+			case 'ar':
+				outputColorSpace = 'LinearSRGBColorSpace' in THREE ? THREE.LinearSRGBColorSpace : rendererDefaultOutputColorSpace;
+				outputEncoding = THREE.LinearEncoding;
+				useLegacyLights = true;
+				break;
+
+			case 'off':
+			default:
+				break;
+
+		}
+
+		if ( outputColorSpace !== undefined && 'outputColorSpace' in renderer && THREE.SRGBColorSpace !== undefined ) {
+
+			renderer.outputColorSpace = outputColorSpace;
+
+		}
+
+		if ( outputEncoding !== undefined && renderer.outputEncoding !== undefined ) {
+
+			renderer.outputEncoding = outputEncoding;
+
+		}
+
+		if ( useLegacyLights !== undefined && 'useLegacyLights' in renderer ) {
+
+			renderer.useLegacyLights = useLegacyLights;
+
+		}
+
+		// Compensate clear color so the background stays visually gray regardless
+		// of output color space. In linear output (AR mode) the same hex value
+		// appears much darker, so we gamma-encode it to counteract that.
+		if ( lightingPreview === 'ar' ) {
+
+			const linearToSRGB = ( c ) => Math.round( Math.pow( c / 255, 1 / 2.2 ) * 255 );
+			const base = isDarkMode ? 0x33 : 0xaa;
+			const compensated = linearToSRGB( base );
+			const hex = ( compensated << 16 ) | ( compensated << 8 ) | compensated;
+			renderer.setClearColor( hex );
+
+		} else {
+
+			renderer.setClearColor( isDarkMode ? 0x333333 : 0xaaaaaa );
+
+		}
+
+	}
 
 	const camera = editor.camera;
 	const scene = editor.scene;
@@ -330,6 +400,8 @@ function Viewport( editor ) {
 
 	signals.rendererUpdated.add( function () {
 
+		applyViewportLightingPreview();
+
 		scene.traverse( function ( child ) {
 
 			if ( child.material !== undefined ) {
@@ -357,26 +429,30 @@ function Viewport( editor ) {
 		}
 
 		renderer = newRenderer;
-
-		renderer.setAnimationLoop( animate );
-		renderer.setClearColor( 0xaaaaaa );
+		rendererDefaultOutputEncoding = renderer.outputEncoding;
+		rendererDefaultOutputColorSpace = 'outputColorSpace' in renderer ? renderer.outputColorSpace : undefined;
+		rendererDefaultUseLegacyLights = 'useLegacyLights' in renderer ? renderer.useLegacyLights : undefined;
 
 		if ( window.matchMedia ) {
 
 			const mediaQuery = window.matchMedia( '(prefers-color-scheme: dark)' );
 			mediaQuery.addEventListener( 'change', function ( event ) {
 
-				renderer.setClearColor( event.matches ? 0x333333 : 0xaaaaaa );
+				isDarkMode = event.matches;
+				applyViewportLightingPreview();
 				updateGridColors( grid1, grid2, event.matches ? [ 0x222222, 0x888888 ] : [ 0x888888, 0x282828 ] );
 
 				render();
 
 			} );
 
-			renderer.setClearColor( mediaQuery.matches ? 0x333333 : 0xaaaaaa );
+			isDarkMode = mediaQuery.matches;
 			updateGridColors( grid1, grid2, mediaQuery.matches ? [ 0x222222, 0x888888 ] : [ 0x888888, 0x282828 ] );
 
 		}
+
+		applyViewportLightingPreview();
+		renderer.setAnimationLoop( animate );
 
 		renderer.setPixelRatio( window.devicePixelRatio );
 		renderer.setSize( container.dom.offsetWidth, container.dom.offsetHeight );
@@ -655,6 +731,13 @@ function Viewport( editor ) {
 
 		}
 
+		render();
+
+	} );
+
+	signals.viewportLightingPreviewChanged.add( function () {
+
+		applyViewportLightingPreview();
 		render();
 
 	} );

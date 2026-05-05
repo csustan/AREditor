@@ -1,4 +1,4 @@
-import { UIPanel, UIButton, UICheckbox } from './libs/ui.js';
+import { UIPanel, UIButton, UICheckbox, UIText } from './libs/ui.js';
 
 function Toolbar( editor ) {
 
@@ -50,6 +50,8 @@ function Toolbar( editor ) {
 	} );
 	container.add( scale );
 
+	const localToggle = new UIPanel().setDisplay( 'inline-block' ).setWidth( '20px' ).setTextAlign( 'center' );
+
 	const local = new UICheckbox( false );
 	local.dom.title = strings.getKey( 'toolbar/local' );
 	local.onChange( function () {
@@ -57,7 +59,12 @@ function Toolbar( editor ) {
 		signals.spaceChanged.dispatch( this.getValue() === true ? 'local' : 'world' );
 
 	} );
-	container.add( local );
+
+	const localLabel = new UIText( 'W' ).setDisplay( 'block' ).setFontSize( '10px' ).setMarginTop( '2px' ).setTextAlign( 'center' );
+
+	localToggle.add( local );
+	localToggle.add( localLabel );
+	container.add( localToggle );
 
 	//
 
@@ -74,6 +81,14 @@ function Toolbar( editor ) {
 			case 'scale': scale.dom.classList.add( 'selected' ); break;
 
 		}
+
+	} );
+
+	signals.spaceChanged.add( function ( space ) {
+
+		const isLocal = space === 'local';
+		local.setValue( isLocal );
+		localLabel.setValue( isLocal ? 'L' : 'W' );
 
 	} );
 

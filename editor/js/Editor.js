@@ -88,6 +88,7 @@ function Editor() {
 
 		viewportCameraChanged: new Signal(),
 		viewportShadingChanged: new Signal(),
+		viewportLightingPreviewChanged: new Signal(),
 
 		intersectionsDetected: new Signal(),
 
@@ -125,6 +126,7 @@ function Editor() {
 
 	this.viewportCamera = this.camera;
 	this.viewportShading = 'default';
+	this.viewportLightingPreview = this.config.getKey( 'settings/viewport/lightingPreview' ) || 'off';
 
 	this.addCamera( this.camera );
 
@@ -546,6 +548,14 @@ Editor.prototype = {
 
 		this.viewportShading = value;
 		this.signals.viewportShadingChanged.dispatch();
+
+	},
+
+	setViewportLightingPreview: function ( value ) {
+
+		this.viewportLightingPreview = value;
+		this.config.setKey( 'settings/viewport/lightingPreview', value );
+		this.signals.viewportLightingPreviewChanged.dispatch();
 
 	},
 

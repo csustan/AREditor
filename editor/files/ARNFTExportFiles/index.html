@@ -74,16 +74,23 @@
                     let names = nftAddTJS.getNames();
                     // console.log(names);
 
+                    // Script update events compiled from app.json editor scripts (populated after app.json loads)
+                    let scriptUpdateEvents = [];
+                    let scriptStartTime = performance.now();
+
                     //ADD_MARKER_MODEL_CONNECTIONS_HERE
-                    //Add markers here
-                    //nftAddTJS.addModel('./Data/models/Shield037.gltf', 'generatedMarkerFile', 80, false);
                     //<!-- insert model -->
 
                     const tick = () => {
+                        let now = performance.now();
+                        for (let i = 0; i < scriptUpdateEvents.length; i++) {
+                            try { scriptUpdateEvents[i]({ time: now - scriptStartTime, delta: 0 }); }
+                            catch (e) { console.error(e.message || e, e.stack || ''); }
+                        }
                         sceneThreejs.draw();
-                        window.requestAnimationFrame(tick)
+                        window.requestAnimationFrame(tick);
                     }
-                    tick()
+                    tick();
 
                 })
             }).catch((error) => {

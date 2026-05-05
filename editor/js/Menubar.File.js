@@ -1204,21 +1204,12 @@ option.onClick(async function () {
 	// Create a new JSZip instance
 	var zip = new JSZip();
 
-	//prepare to build the model.gltf file for export
-	const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
-
-	const exporter = new GLTFExporter();
-	const sceneToExportForARNFT = createSceneCloneWithoutNamedObjects(editor.scene, [DEFAULT_MARKER_PLANE_NAME]);
-
-	// Export the scene as GLTF (non-binary)
-	exporter.parse(sceneToExportForARNFT, function (gltfOutput) {
-
-		//Step 1: Stringify the GLTF result
-		// This gltfOutput is a plain JS object — you can JSON.stringify it
-		const gltfString = JSON.stringify(gltfOutput, null, 2);
-
-		// Assign to content for zipping
-		toZipForARNFT['model.gltf'] = gltfString;
+	// Export app.json (ObjectLoader format) — fully preserves ShaderMaterial and editor scripts
+	let outputForARNFT = editor.toJSON();
+	outputForARNFT = removeNamedObjectsFromExportData(outputForARNFT, [DEFAULT_MARKER_PLANE_NAME]);
+	outputForARNFT.metadata.type = 'App';
+	delete outputForARNFT.history;
+	toZipForARNFT['app.json'] = JSON.stringify(outputForARNFT, null, '\t');
 
 		const appTitle = config.getKey('project/title') || 'AR Natural Feature Tracker Web App';
 		//handle lighitng and other render settings for the ARNFT publish
@@ -1239,9 +1230,36 @@ option.onClick(async function () {
 			content = content.replace('<!-- title -->', appTitle);
 			content = content.replace('//<!-- renderer settings -->', rendererSettingsForARNFT);
 
-			const theNFTModelName = "model";
-
-			const modelNameToInsert = "nftAddTJS.addModel('./Data/models/" + theNFTModelName + ".gltf', 'generatedMarkerFile', 80, false);"
+			const modelNameToInsert = `fetch('./Data/app.json')
+							.then(function(r) { return r.json(); })
+							.then(function(json) {
+								var objectLoader = new THREE.ObjectLoader();
+								var loadedScene = objectLoader.parse(json.scene);
+								loadedScene.scale.set(80, 80, 80);
+								loadedScene.rotation.x = Math.PI / 2;
+								nftAddTJS.add(loadedScene, 'generatedMarkerFile', false);
+								if (json.scripts) {
+									var evtKeys = ['init','start','stop','keydown','keyup','pointerdown','pointerup','pointermove','update'];
+									var wrapParams = 'player,renderer,scene,camera,' + evtKeys.join(',');
+									var wrapResultObj = {};
+									evtKeys.forEach(function(k) { wrapResultObj[k] = k; });
+									var wrapResult = JSON.stringify(wrapResultObj).replace(/"/g, '');
+									var renderer = sceneThreejs.getRenderer();
+									var camera = sceneThreejs.getCamera();
+									for (var uuid in json.scripts) {
+										var object = loadedScene.getObjectByProperty('uuid', uuid, true);
+										if (!object) continue;
+										json.scripts[uuid].forEach(function(script) {
+											var fns = (new Function(wrapParams, script.source + '\\nreturn ' + wrapResult + ';').bind(object))(
+												null, renderer, loadedScene, camera,
+												function(){}, function(){}, function(){}, function(){},
+												function(){}, function(){}, function(){}, function(){}, function(){}
+											);
+											if (fns.update) scriptUpdateEvents.push(fns.update.bind(object));
+										});
+									}
+								}
+							});`;
 
 			content = content.replace('//<!-- insert model -->', modelNameToInsert);
 
@@ -1388,8 +1406,8 @@ option.onClick(async function () {
 						// end insert
 
 
-						//Add the model.gltf
-						zip.file("Data/models/model.gltf", toZipForARNFT['model.gltf'], { binary: false });
+						//Add the app.json (ObjectLoader format — preserves ShaderMaterial and scripts)
+						zip.file("Data/app.json", toZipForARNFT['app.json'], { binary: false });
 
 						//Additionally, the index.html page needed to be adjusted, so it must be added separately
 						console.log("toZipForARNFT['index.html']"); //Test code
@@ -1518,10 +1536,6 @@ option.onClick(async function () {
 				}
 
 		});
-	}, undefined, {
-		binary: false,
-		animations: getAnimations(sceneToExportForARNFT)
-	});
 });
 
 options.add(option);

@@ -76,13 +76,22 @@
 
                     // Script update events compiled from app.json editor scripts (populated after app.json loads)
                     let scriptUpdateEvents = [];
+                    let animationMixers = [];
                     let scriptStartTime = performance.now();
+                    let previousTickTime = performance.now();
 
                     //ADD_MARKER_MODEL_CONNECTIONS_HERE
                     //<!-- insert model -->
 
                     const tick = () => {
                         let now = performance.now();
+                        let deltaSeconds = Math.max(0, (now - previousTickTime) / 1000);
+                        previousTickTime = now;
+
+                        for (let i = 0; i < animationMixers.length; i++) {
+                            animationMixers[i].update(deltaSeconds);
+                        }
+
                         for (let i = 0; i < scriptUpdateEvents.length; i++) {
                             try { scriptUpdateEvents[i]({ time: now - scriptStartTime, delta: 0 }); }
                             catch (e) { console.error(e.message || e, e.stack || ''); }

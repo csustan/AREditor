@@ -1238,6 +1238,15 @@ option.onClick(async function () {
 								loadedScene.scale.set(80, 80, 80);
 								loadedScene.rotation.x = Math.PI / 2;
 								nftAddTJS.add(loadedScene, 'generatedMarkerFile', false);
+								loadedScene.traverse(function(object) {
+									if (object.animations && object.animations.length > 0) {
+										var mixer = new THREE.AnimationMixer(object);
+										for (var i = 0; i < object.animations.length; i++) {
+											mixer.clipAction(object.animations[i], object).play();
+										}
+										animationMixers.push(mixer);
+									}
+								});
 								if (json.scripts) {
 									var evtKeys = ['init','start','stop','keydown','keyup','pointerdown','pointerup','pointermove','update'];
 									var wrapParams = 'player,renderer,scene,camera,' + evtKeys.join(',');

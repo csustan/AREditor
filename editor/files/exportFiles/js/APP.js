@@ -103,6 +103,8 @@ var APP = {
         var vrButton = VRButton.createButton(globalVar.renderer);
 
         var events = {};
+        var animationMixers = [];
+        var animationClock = new THREE.Clock();
 
         var dom = document.createElement('div');
         dom.appendChild(globalVar.renderer.domElement); // should this be renderer or globalVar.arToolkitContext ?
@@ -335,6 +337,18 @@ var APP = {
             //Start new code:
             // Load the user provided scene from json
             var loadedScene = loader.parse(json.scene);
+
+            // Auto-play imported clip animations (e.g. GLB clips attached to objects).
+            animationMixers = [];
+            loadedScene.traverse(function (object) {
+                if (object.animations && object.animations.length > 0) {
+                    var mixer = new THREE.AnimationMixer(object);
+                    for (var i = 0; i < object.animations.length; i++) {
+                        mixer.clipAction(object.animations[i], object).play();
+                    }
+                    animationMixers.push(mixer);
+                }
+            });
             // Call the AR setup function with the loaded scene
             this.ARSetup(loadedScene);
 
@@ -468,12 +482,17 @@ var APP = {
 
         function animate() {
             time = performance.now();
+            var deltaSeconds = animationClock.getDelta();
 
             //The original code uses try/catch to deal with wierd load timing, I'll just use a flag
             if (globalVar.arMarkerControlsFlag) {
                 //globalVar.arMarkerControls.update(); //Update should now be handled automatically by THREEx.ArMarkerControls
                 // Update AR.js context on each animation frame
                 globalVar.arToolkitContext.update(globalVar.arToolkitSource.domElement);
+            }
+
+            for (var i = 0; i < animationMixers.length; i++) {
+                animationMixers[i].update(deltaSeconds);
             }
 
             try {
@@ -521,6 +540,7 @@ var APP = {
             if (globalVar.renderer.xr.enabled) dom.append(vrButton);
 
             startTime = prevTime = performance.now();
+            animationClock.start();
 
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
@@ -545,6 +565,7 @@ var APP = {
             dispatch(events.stop, arguments);
 
             globalVar.renderer.setAnimationLoop(null);
+            animationClock.stop();
         };
 
         this.render = function (time) {

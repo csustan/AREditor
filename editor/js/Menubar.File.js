@@ -14,6 +14,122 @@ import { UIPanel, UIRow, UIHorizontalRule } from './libs/ui.js';
 // Use one shared name so that the "default template" and export filter will stay in sync.
 const DEFAULT_MARKER_PLANE_NAME = 'DefaultMarkerPlaneForScale';
 
+// Finds the generated settings block inside the APP.js template so Publish AR Marker App can replace only that block.
+const AR_MARKER_APP_EXPORT_SETTINGS_BLOCK = /\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_START__[\s\S]*?\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_END__/;
+
+// Defaults mirror the previous hard-coded APP.js values so exports behave the same until a setting is provided.
+const AR_MARKER_APP_EXPORT_DEFAULTS = {
+	camera: {
+		// PerspectiveCamera values used by the exported marker app.
+		fov: 70,
+		near: 0.05,
+		far: 1000
+	},
+	arToolkitSource: {
+		// The exported marker app currently uses the device camera as its AR source.
+		sourceType: 'webcam'
+	},
+	arToolkitContext: {
+		// ARToolkit tracking setup used by the exported marker app.
+		cameraParametersUrl: './js/data/camera_para.dat',
+		detectionMode: 'mono'
+	},
+	arMarkerControls: {
+		// Marker file and smoothing values used when binding the scene to the marker.
+		type: 'pattern',
+		patternUrl: './js/data/lambda.patt',
+		smooth: true,
+		smoothCount: 5,
+		smoothTolerance: 0.01,
+		smoothThreshold: 2
+	}
+};
+
+function getConfigString(config, key, fallback) {
+
+	// Use a configured string only when it is non-empty; otherwise keep the export default.
+	const value = config.getKey(key);
+	return typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback;
+
+}
+
+function getConfigNumber(config, key, fallback) {
+
+	// Convert stored config values to numbers, but ignore missing or invalid values.
+	const value = config.getKey(key);
+	const number = Number(value);
+	return Number.isFinite(number) ? number : fallback;
+
+}
+
+function getConfigBoolean(config, key, fallback) {
+
+	// Only real booleans override the default so truthy strings do not accidentally change behavior.
+	const value = config.getKey(key);
+	return typeof value === 'boolean' ? value : fallback;
+
+}
+
+function createARMarkerAppExportSettings(config) {
+
+	// Build the settings object that will be written into the generated APP.js file.
+	const defaults = AR_MARKER_APP_EXPORT_DEFAULTS;
+
+	return {
+		camera: {
+			// The aspect ratio stays hard-coded in APP.js so it is calculated from the runtime viewport.
+			fov: getConfigNumber(config, 'project/arMarkerApp/camera/fov', defaults.camera.fov),
+			near: getConfigNumber(config, 'project/arMarkerApp/camera/near', defaults.camera.near),
+			far: getConfigNumber(config, 'project/arMarkerApp/camera/far', defaults.camera.far)
+		},
+		arToolkitSource: {
+			// Keep the source settings grouped separately so future UI can expose them cleanly.
+			sourceType: getConfigString(config, 'project/arMarkerApp/source/sourceType', defaults.arToolkitSource.sourceType)
+		},
+		arToolkitContext: {
+			// Context settings control how ARToolkit detects the marker.
+			cameraParametersUrl: getConfigString(config, 'project/arMarkerApp/context/cameraParametersUrl', defaults.arToolkitContext.cameraParametersUrl),
+			detectionMode: getConfigString(config, 'project/arMarkerApp/context/detectionMode', defaults.arToolkitContext.detectionMode)
+		},
+		arMarkerControls: {
+			// Marker controls connect the generated pattern file to the exported Three.js scene.
+			type: getConfigString(config, 'project/arMarkerApp/marker/type', defaults.arMarkerControls.type),
+			patternUrl: getConfigString(config, 'project/arMarkerApp/marker/patternUrl', defaults.arMarkerControls.patternUrl),
+			smooth: getConfigBoolean(config, 'project/arMarkerApp/marker/smooth', defaults.arMarkerControls.smooth),
+			smoothCount: getConfigNumber(config, 'project/arMarkerApp/marker/smoothCount', defaults.arMarkerControls.smoothCount),
+			smoothTolerance: getConfigNumber(config, 'project/arMarkerApp/marker/smoothTolerance', defaults.arMarkerControls.smoothTolerance),
+			smoothThreshold: getConfigNumber(config, 'project/arMarkerApp/marker/smoothThreshold', defaults.arMarkerControls.smoothThreshold)
+		}
+	};
+
+}
+
+function createARMarkerAppExportSettingsBlock(settings) {
+
+	// Recreate the full marker comments so the block remains replaceable on later exports.
+	return [
+		'// __AR_MARKER_APP_EXPORT_SETTINGS_START__',
+		'const AR_MARKER_APP_EXPORT_SETTINGS = ' + JSON.stringify(settings, null, '\t') + ';',
+		'// __AR_MARKER_APP_EXPORT_SETTINGS_END__'
+	].join('\n');
+
+}
+
+function injectARMarkerAppExportSettings(appJSContent, settings) {
+
+	// If the template is ever changed and the marker comments disappear, leave APP.js untouched instead of corrupting it.
+	if (!AR_MARKER_APP_EXPORT_SETTINGS_BLOCK.test(appJSContent)) {
+
+		console.warn('[Publish AR App] APP.js export settings block was not found. Using the template defaults.');
+		return appJSContent;
+
+	}
+
+	// Replace the default settings in the APP.js template with the settings chosen at export time.
+	return appJSContent.replace(AR_MARKER_APP_EXPORT_SETTINGS_BLOCK, createARMarkerAppExportSettingsBlock(settings));
+
+}
+
 // Removes the named "editor-only" objects from a cloned export payload *before* the app.json is written.
 function removeNamedObjectsFromExportData(data, objectNamesToRemove) {
 
@@ -679,36 +795,51 @@ function MenubarFile(editor) {
 		//const loader = new THREE.FileLoader(manager); no longer using the THREE.LoadingManager with THREE.FileLoader
 		const loader = new THREE.FileLoader();
 
+		function loadTextFile(url) {
+
+			// Wrap FileLoader in a promise so publish steps can be ordered with await.
+			return new Promise(function (resolve, reject) {
+
+				loader.load(url, resolve, undefined, reject);
+
+			});
+
+		}
+
 		//loader.load('js/libs/app/index.html', function (content) {
-		loader.load('../editor/files/exportFiles/index.html', function (content) {
+		let content = await loadTextFile('../editor/files/exportFiles/index.html');
 
-			content = content.replace('<!-- title -->', appTitle);
+		content = content.replace('<!-- title -->', appTitle);
 
-			const includes = [];
+		const includes = [];
 
-			content = content.replace('<!-- includes -->', includes.join('\n\t\t'));
+		content = content.replace('<!-- includes -->', includes.join('\n\t\t'));
 
-			let editButton = '';
+		let editButton = '';
 
-			if (config.getKey('project/editable')) {
+		if (config.getKey('project/editable')) {
 
-				editButton = [
-					'			let button = document.createElement( \'a\' );',
-					'			button.href = \'https://threejs.org/editor/#file=\' + location.href.split( \'/\' ).slice( 0, - 1 ).join( \'/\' ) + \'/app.json\';',
-					'			button.style.cssText = \'position: absolute; bottom: 20px; right: 20px; padding: 10px 16px; color: #fff; border: 1px solid #fff; border-radius: 20px; text-decoration: none;\';',
-					'			button.target = \'_blank\';',
-					'			button.textContent = \'EDIT\';',
-					'			document.body.appendChild( button );',
-				].join('\n');
+			editButton = [
+				'			let button = document.createElement( \'a\' );',
+				'			button.href = \'https://threejs.org/editor/#file=\' + location.href.split( \'/\' ).slice( 0, - 1 ).join( \'/\' ) + \'/app.json\';',
+				'			button.style.cssText = \'position: absolute; bottom: 20px; right: 20px; padding: 10px 16px; color: #fff; border: 1px solid #fff; border-radius: 20px; text-decoration: none;\';',
+				'			button.target = \'_blank\';',
+				'			button.textContent = \'EDIT\';',
+				'			document.body.appendChild( button );',
+			].join('\n');
 
-			}
+		}
 
-			content = content.replace('\t\t\t/* edit button ', editButton);
+		content = content.replace('\t\t\t/* edit button ', editButton);
 
-			//toZip['index.html'] = strToU8(content);
-			toZip['index.html'] = content;
+		//toZip['index.html'] = strToU8(content);
+		toZip['index.html'] = content;
 
-		});
+		// Load APP.js as text, inject the export settings block, then zip that generated content.
+		const appJSContent = injectARMarkerAppExportSettings(
+			await loadTextFile('../editor/files/exportFiles/js/APP.js'),
+			createARMarkerAppExportSettings(config)
+		);
 
 
 		//Building a JSZip
@@ -909,7 +1040,8 @@ function MenubarFile(editor) {
 			{ url: '../editor/files/exportFiles/data/largeLambda.patt', name: 'largeLambda.patt', path: 'data/' },
 			{ url: '../editor/files/exportFiles/data/camera_para.dat', name: 'camera_para.dat', path: 'data/' },
 			{ url: '../editor/files/exportFiles/img/favicon.ico', name: 'favicon.ico', path: 'img/' },
-			{ url: '../editor/files/exportFiles/js/APP.js', name: 'APP.js', path: 'js/' },
+			// Use generated APP.js data instead of fetching the raw template so export settings are included.
+			{ name: 'APP.js', path: 'js/', data: appJSContent },
 			{ url: '../editor/files/exportFiles/js/GLTFLoader.js', name: 'GLTFLoader.js', path: 'js/' },
 			{ url: '../editor/files/exportFiles/js/LegacyJSONLoader.js', name: 'LegacyJSONLoader.js', path: 'js/' },
 			{ url: '../editor/files/exportFiles/js/OrbitControls.js', name: 'OrbitControls.js', path: 'js/' },

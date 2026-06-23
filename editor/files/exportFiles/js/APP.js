@@ -24,24 +24,74 @@
 //Create a Global Object that can store global variables to be called by address later
 const globalVar = {};
 
+// __AR_MARKER_APP_EXPORT_SETTINGS_START__
+// Publish AR Marker App replaces this object during export; these values preserve the template defaults.
+const AR_MARKER_APP_EXPORT_SETTINGS = {
+    camera: {
+        // PerspectiveCamera values used by the exported marker app.
+        fov: 70,
+        near: 0.05,
+        far: 1000
+    },
+    arToolkitSource: {
+        // The exported marker app currently uses the device camera as its AR source.
+        sourceType: 'webcam'
+    },
+    arToolkitContext: {
+        // ARToolkit tracking setup used by the exported marker app.
+        cameraParametersUrl: './js/data/camera_para.dat',
+        detectionMode: 'mono'
+    },
+    arMarkerControls: {
+        // Marker file and smoothing values used when binding the scene to the marker.
+        type: 'pattern',
+        patternUrl: './js/data/lambda.patt',
+        smooth: true,
+        smoothCount: 5,
+        smoothTolerance: 0.01,
+        smoothThreshold: 2
+    }
+};
+// __AR_MARKER_APP_EXPORT_SETTINGS_END__
+
+function getNumberSetting(value, fallback) {
+    // Allow export settings to override numeric defaults only when they contain valid numbers.
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+}
+
+function getBooleanSetting(value, fallback) {
+    // Allow export settings to override boolean defaults only when they contain real booleans.
+    return typeof value === 'boolean' ? value : fallback;
+}
+
+// Split the generated settings into local aliases so each setup section reads from its own group.
+const cameraSettings = AR_MARKER_APP_EXPORT_SETTINGS.camera || {};
+const arToolkitSourceSettings = AR_MARKER_APP_EXPORT_SETTINGS.arToolkitSource || {};
+const arToolkitContextSettings = AR_MARKER_APP_EXPORT_SETTINGS.arToolkitContext || {};
+const arMarkerControlSettings = AR_MARKER_APP_EXPORT_SETTINGS.arMarkerControls || {};
+
 //Set up a camera for ThreeJS
 globalVar.camera = new THREE.PerspectiveCamera(
     //50, window.innerWidth / window.innerHeight, 0.02, 100.0 //old settings
-    70, // Field of view
+    getNumberSetting(cameraSettings.fov, 70), // Field of view
+    // Keep aspect hard-coded to the runtime viewport calculation so it always uses the current screen size.
     window.innerWidth / window.innerHeight * window.devicePixelRatio, //window.innerWidth / window.innerHeight, // Aspect ratio
-    0.05,//0.1, // Near clipping plane
-    1000 // Far clipping plane
+    getNumberSetting(cameraSettings.near, 0.05),//0.1, // Near clipping plane
+    getNumberSetting(cameraSettings.far, 1000) // Far clipping plane
 );
 
 //add arToolkitSource to the correct scope and call it later
 globalVar.arToolkitSource = new THREEx.ArToolkitSource({
-    sourceType: 'webcam',
+    // Defaults to webcam unless the export settings provide another ARToolkit source type.
+    sourceType: arToolkitSourceSettings.sourceType || 'webcam',
 });
 
 //add arToolkitContext to the correct scope and call it later
 globalVar.arToolkitContext = new THREEx.ArToolkitContext({
-    cameraParametersUrl: './js/data/camera_para.dat',
-    detectionMode: 'mono',
+    // Defaults keep using the exported camera parameters file and mono marker detection.
+    cameraParametersUrl: arToolkitContextSettings.cameraParametersUrl || './js/data/camera_para.dat',
+    detectionMode: arToolkitContextSettings.detectionMode || 'mono',
 });
 globalVar.arToolkitContextReadyFlag = false;
 
@@ -286,14 +336,16 @@ var APP = {
 
                         // Now create an AR.js marker based on the provided pattern URL
                         globalVar.arMarkerControls = new THREEx.ArMarkerControls(globalVar.arToolkitContext, globalVar.markerRoot, {
-                            type: 'pattern',
-                            patternUrl: './js/data/lambda.patt',
+                            // Defaults keep using the generated pattern marker in js/data/lambda.patt.
+                            type: arMarkerControlSettings.type || 'pattern',
+                            patternUrl: arMarkerControlSettings.patternUrl || './js/data/lambda.patt',
 
-                            smooth: true, //Activate smoothing
+                            // Smoothing defaults match the original hard-coded tracking behavior.
+                            smooth: getBooleanSetting(arMarkerControlSettings.smooth, true), //Activate smoothing
 
-                            smoothCount: 5, // number of matrices to smooth tracking over, more = smoother but slower follow                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
-                            smoothTolerance: 0.01, // distance tolerance for smoothing, if smoothThreshold # of matrices are under tolerance, tracking will stay still
-                            smoothThreshold: 2 //Wobble control	// threshold for smoothing, will keep still unless enough matrices are over tolerance
+                            smoothCount: getNumberSetting(arMarkerControlSettings.smoothCount, 5), // number of matrices to smooth tracking over, more = smoother but slower follow
+                            smoothTolerance: getNumberSetting(arMarkerControlSettings.smoothTolerance, 0.01), // distance tolerance for smoothing, if smoothThreshold # of matrices are under tolerance, tracking will stay still
+                            smoothThreshold: getNumberSetting(arMarkerControlSettings.smoothThreshold, 2) //Wobble control	// threshold for smoothing, will keep still unless enough matrices are over tolerance
 
                         });
                         globalVar.arMarkerControlsFlag = true; //when the arMarkerControls are actually done, the Animate function can start using it.

@@ -1,5 +1,5 @@
 import {
-  UIPanel, UIText, UIInput, UINumber, UIButton, UIRow
+  UISpan, UIText, UIInput, UISelect, UICheckbox, UINumber, UIButton, UIRow, UIHorizontalRule
 } from './libs/ui.js';
 
 //This will generate a Canvas Element that will work as a fall back wor whn the images won't load.
@@ -38,6 +38,33 @@ let imageName = null;
 let selectedColor = 'black';
 const defaultMarkerURL = 'files/LargeLambdaSymbol.png'; //Test Code
 //const defaultMarkerURL = generateFallbackRedSwatch(); //Utlize the default
+
+// Defaults match Menubar.File.js and the exported APP.js template.
+const AR_MARKER_APP_EXPORT_DEFAULTS = {
+  camera: {
+    fov: 70,
+    near: 0.05,
+    far: 1000
+  },
+  arToolkitSource: {
+    sourceType: 'webcam'
+  },
+  arToolkitContext: {
+    cameraParametersUrl: './js/data/camera_para.dat',
+    detectionMode: 'mono'
+  },
+  arMarkerControls: {
+    type: 'pattern',
+    patternUrl: './js/data/lambda.patt',
+    smooth: true,
+    smoothCount: 5,
+    smoothTolerance: 0.01,
+    smoothThreshold: 2
+  }
+};
+
+// Set true while developing to show the Advanced AR Settings panel; leave false for release builds.
+const SHOW_ADVANCED_AR_SETTINGS = false;
 
 // --- Shared exported pattern/image state for zip building ---
 let sharedMarkerPattern = null;
@@ -141,22 +168,163 @@ function SidebarMarkerGenerator(editor) {
   // Store editor globally so global funcs can access it
   window._editor = editor;
 
-  const container = new UIPanel();
-  container.setId('sidebar-marker-generator');
-  container.setPaddingTop('20px');
+  const config = editor.config;
 
+  const container = new UISpan();
+  container.setId('sidebar-marker-generator');
+  container.dom.style.display = 'block';
+  container.dom.style.width = '100%';
+  container.dom.style.boxSizing = 'border-box';
+
+  const content = new UISpan();
+  content.dom.style.display = 'block';
+  content.dom.style.width = '100%';
+  content.dom.style.boxSizing = 'border-box';
+  content.dom.style.paddingLeft = '14px';
+  content.dom.style.paddingRight = '10px';
+  content.dom.style.paddingTop = '20px';
+  container.add(content);
+
+  function getConfigString(key, fallback) {
+    const value = config.getKey(key);
+    return typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback;
+  }
+
+  function getConfigNumber(key, fallback) {
+    const number = Number(config.getKey(key));
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function getConfigBoolean(key, fallback) {
+    const value = config.getKey(key);
+    return typeof value === 'boolean' ? value : fallback;
+  }
+
+  function makeSectionTitle(text) {
+    const title = new UIText(text);
+    title.setFontSize('13px');
+    title.setMarginBottom('8px');
+    title.dom.style.display = 'block';
+    return title;
+  }
+
+  function makeSettingRow(labelText, control, labelWidth = '110px') {
+    const row = new UIRow();
+    row.setMarginBottom('8px');
+    row.dom.style.display = 'flex';
+    row.dom.style.flexWrap = 'wrap';
+    row.dom.style.alignItems = 'center';
+    row.dom.style.gap = '6px';
+    row.add(new UIText(labelText).setWidth(labelWidth));
+    row.add(control);
+    content.add(row);
+    return row;
+  }
+
+  function makeNumberSetting(labelText, key, fallback, options = {}) {
+    const control = new UINumber();
+    control.setPrecision(options.precision ?? 2);
+    control.setRange(options.min ?? -Infinity, options.max ?? Infinity);
+    control.setStep(options.step ?? 1);
+    control.setWidth(options.width ?? '90px');
+    control.setValue(getConfigNumber(key, fallback));
+    control.onChange(() => config.setKey(key, control.getValue()));
+    makeSettingRow(labelText, control, options.labelWidth);
+    return control;
+  }
+
+  function makeTextSetting(labelText, key, fallback, options = {}) {
+    const control = new UIInput();
+    control.setWidth(options.width ?? '170px');
+    control.setValue(getConfigString(key, fallback));
+    control.onChange(() => config.setKey(key, control.getValue()));
+    makeSettingRow(labelText, control, options.labelWidth);
+    return control;
+  }
+
+  function makeSelectSetting(labelText, key, fallback, options, rowOptions = {}) {
+    const control = new UISelect();
+    control.setWidth(rowOptions.width ?? '170px');
+    control.setOptions(options);
+    control.setValue(getConfigString(key, fallback));
+    control.onChange(() => config.setKey(key, control.getValue()));
+    makeSettingRow(labelText, control, rowOptions.labelWidth);
+    return control;
+  }
+
+  function makeCheckboxSetting(labelText, key, fallback, options = {}) {
+    const control = new UICheckbox(getConfigBoolean(key, fallback));
+    control.onChange(() => config.setKey(key, control.getValue()));
+    makeSettingRow(labelText, control, options.labelWidth);
+    return control;
+  }
+
+  const header = new UIText('AR Marker Generator');
+  header.setFontSize('14px');
+  header.setMarginBottom('8px');
+  header.dom.style.display = 'block';
+  content.add(header);
+
+  const fileStatusText = new UIText('Using scene background.');
+  fileStatusText.setColor('#888');
+  fileStatusText.setMarginBottom('6px');
+  fileStatusText.dom.style.display = 'block';
+  content.add(fileStatusText);
+
+  const fileSection = new UISpan();
+  fileSection.dom.style.display = 'block';
+  fileSection.dom.style.marginBottom = '8px';
+
+  const imageLabel = new UIText('Image');
+  imageLabel.dom.style.display = 'block';
+  imageLabel.dom.style.marginBottom = '6px';
+  fileSection.add(imageLabel);
+
+  const previewImage = document.createElement('img');
+  previewImage.style.maxWidth = '100%';
+  previewImage.style.display = 'none';
+  previewImage.style.marginBottom = '8px';
+  previewImage.style.border = '1px solid #444';
+  fileSection.dom.appendChild(previewImage);
+  window._markerPreviewImage = previewImage;
+
+  const chooseFileRow = new UIRow();
+  chooseFileRow.dom.style.display = 'flex';
+  chooseFileRow.dom.style.alignItems = 'center';
+  chooseFileRow.dom.style.gap = '8px';
+  chooseFileRow.setMarginBottom('6px');
+
+  const chooseFileButton = new UIButton('Choose File');
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
   fileInput.accept = 'image/*';
-  fileInput.style.position = 'absolute';
-  fileInput.style.left = '-9999px';
-  document.body.appendChild(fileInput);
+  fileInput.style.display = 'none';
+  chooseFileButton.onClick(() => fileInput.click());
 
-  fileInput.addEventListener('change', () => {
+  chooseFileRow.add(chooseFileButton);
+  chooseFileRow.dom.appendChild(fileInput);
+  fileSection.add(chooseFileRow);
+
+  const chosenFileNameText = new UIText('No file chosen');
+  chosenFileNameText.setColor('#888');
+  chosenFileNameText.dom.style.display = 'block';
+  fileSection.add(chosenFileNameText);
+
+  content.add(fileSection);
+
+  const statusText = new UIText('Marker preview updates automatically.');
+  statusText.setColor('#888');
+  statusText.setMarginBottom('8px');
+  statusText.dom.style.display = 'block';
+  content.add(statusText);
+
+  fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
 
     imageName = file.name.split('.').slice(0, -1).join('.') || file.name;
+    chosenFileNameText.setValue(file.name);
+    fileStatusText.setValue('Custom marker image loaded.');
 
     const reader = new FileReader();
 
@@ -180,25 +348,14 @@ function SidebarMarkerGenerator(editor) {
 
   });
 
-  const uploadButton = new UIButton('Upload Marker Image').onClick(() => fileInput.click());
-  container.add(uploadButton);
+  content.add(makeSectionTitle('Marker Image Settings'));
 
-  const previewImage = document.createElement('img');
-  previewImage.style.marginTop = '10px';
-  previewImage.style.maxWidth = '100%';
-  previewImage.style.border = '1px solid #444';
-  previewImage.style.display = 'none';
-  container.dom.appendChild(previewImage);
-  window._markerPreviewImage = previewImage;
-
-  container.add(new UIText('Pattern Ratio:'));
   const patternRatio = new UINumber(0.5).setRange(0.1, 0.9).setStep(0.01).onChange(updateFullMarkerImage);
-  container.add(patternRatio);
+  makeSettingRow('Pattern Ratio', patternRatio);
   window._markerPatternRatio = patternRatio;
 
-  container.add(new UIText('Image Size (px):'));
   const imageSize = new UINumber(512).setRange(150, 2500).setStep(10).onChange(updateFullMarkerImage);
-  container.add(imageSize);
+  makeSettingRow('Image Size (px)', imageSize);
   window._markerImageSize = imageSize;
 
   const colorDropdown = new UIInput().setValue(selectedColor).onChange(() => {
@@ -233,6 +390,11 @@ function SidebarMarkerGenerator(editor) {
   // });
   // container.add(swatchRow2);
   
+  const downloadRow = new UIRow();
+  downloadRow.setMarginBottom('8px');
+  downloadRow.dom.style.display = 'flex';
+  downloadRow.dom.style.flexWrap = 'wrap';
+  downloadRow.dom.style.gap = '6px';
 
   const downloadPattern = new UIButton('Download Marker (.patt)').onClick(() => {
     if (!innerImageURL) return alert('Upload a file first');
@@ -251,26 +413,137 @@ function SidebarMarkerGenerator(editor) {
     document.body.removeChild(a);
   });
 
-  container.add(downloadPattern);
-  container.add(downloadImage);
+  downloadRow.add(downloadPattern);
+  downloadRow.add(downloadImage);
+  content.add(downloadRow);
 
+  const pdfRow = new UIRow();
+  pdfRow.setMarginBottom('8px');
+  pdfRow.dom.style.display = 'flex';
+  pdfRow.dom.style.flexWrap = 'wrap';
+  pdfRow.dom.style.gap = '6px';
   const pdf1 = new UIButton('PDF One/Page').onClick(async () => await generatePDFLayout(1));
   const pdf2 = new UIButton('PDF Two/Page').onClick(async () => await generatePDFLayout(2));
   const pdf6 = new UIButton('PDF Six/Page').onClick(async () => await generatePDFLayout(6));
-  container.add(pdf1);
-  container.add(pdf2);
-  container.add(pdf6);
+  pdfRow.add(pdf1);
+  pdfRow.add(pdf2);
+  pdfRow.add(pdf6);
+  content.add(pdfRow);
 
   const resetButton = new UIButton('Reset to Default Marker').onClick(async () => {
     innerImageURL = defaultMarkerURL;
     imageName = 'default-marker';
+    chosenFileNameText.setValue('Default marker');
+    fileStatusText.setValue('Default marker image loaded.');
     fullMarkerURL = null; // Force regenerate on reset
     updateFullMarkerImage();
     await window.generateMarkerImage();
     await window.generateMarkerPattern();
   });
+  resetButton.setMarginBottom('10px');
 
-  container.add(resetButton);
+  content.add(resetButton);
+
+  content.add(new UIHorizontalRule());
+  content.add(makeSectionTitle('Export Runtime Settings'));
+
+  const runtimeControls = {
+    cameraFov: makeNumberSetting('Camera FOV', 'project/arMarkerApp/camera/fov', AR_MARKER_APP_EXPORT_DEFAULTS.camera.fov, {
+      min: 1,
+      max: 179,
+      step: 1,
+      precision: 0
+    }),
+    cameraNear: makeNumberSetting('Camera Near', 'project/arMarkerApp/camera/near', AR_MARKER_APP_EXPORT_DEFAULTS.camera.near, {
+      min: 0.001,
+      max: 1000,
+      step: 0.01,
+      precision: 3
+    }),
+    cameraFar: makeNumberSetting('Camera Far', 'project/arMarkerApp/camera/far', AR_MARKER_APP_EXPORT_DEFAULTS.camera.far, {
+      min: 0.01,
+      max: 100000,
+      step: 10,
+      precision: 2
+    }),
+    smooth: makeCheckboxSetting('Smoothing', 'project/arMarkerApp/marker/smooth', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.smooth),
+    smoothCount: makeNumberSetting('Smooth Count', 'project/arMarkerApp/marker/smoothCount', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.smoothCount, {
+      min: 1,
+      max: 100,
+      step: 1,
+      precision: 0
+    }),
+    smoothTolerance: makeNumberSetting('Smooth Tolerance', 'project/arMarkerApp/marker/smoothTolerance', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.smoothTolerance, {
+      min: 0,
+      max: 10,
+      step: 0.01,
+      precision: 4
+    }),
+    smoothThreshold: makeNumberSetting('Smooth Threshold', 'project/arMarkerApp/marker/smoothThreshold', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.smoothThreshold, {
+      min: 0,
+      max: 100,
+      step: 1,
+      precision: 0
+    })
+  };
+
+  content.add(new UIHorizontalRule());
+  if (SHOW_ADVANCED_AR_SETTINGS) {
+    content.add(makeSectionTitle('Advanced AR Settings'));
+
+    runtimeControls.sourceType = makeSelectSetting('Source Type', 'project/arMarkerApp/source/sourceType', AR_MARKER_APP_EXPORT_DEFAULTS.arToolkitSource.sourceType, {
+      webcam: 'webcam',
+      image: 'image',
+      video: 'video'
+    });
+    runtimeControls.cameraParametersUrl = makeTextSetting('Camera Params', 'project/arMarkerApp/context/cameraParametersUrl', AR_MARKER_APP_EXPORT_DEFAULTS.arToolkitContext.cameraParametersUrl);
+    runtimeControls.detectionMode = makeSelectSetting('Detection Mode', 'project/arMarkerApp/context/detectionMode', AR_MARKER_APP_EXPORT_DEFAULTS.arToolkitContext.detectionMode, {
+      mono: 'mono',
+      color: 'color',
+      mono_and_matrix: 'mono_and_matrix',
+      color_and_matrix: 'color_and_matrix'
+    });
+    runtimeControls.markerType = makeSelectSetting('Marker Type', 'project/arMarkerApp/marker/type', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.type, {
+      pattern: 'pattern',
+      barcode: 'barcode',
+      unknown: 'unknown'
+    });
+    runtimeControls.patternUrl = makeTextSetting('Pattern URL', 'project/arMarkerApp/marker/patternUrl', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.patternUrl);
+
+    const resetRuntimeSettingsButton = new UIButton('Reset Export Settings').onClick(() => {
+      const defaults = AR_MARKER_APP_EXPORT_DEFAULTS;
+
+      runtimeControls.cameraFov.setValue(defaults.camera.fov);
+      runtimeControls.cameraNear.setValue(defaults.camera.near);
+      runtimeControls.cameraFar.setValue(defaults.camera.far);
+      runtimeControls.smooth.setValue(defaults.arMarkerControls.smooth);
+      runtimeControls.smoothCount.setValue(defaults.arMarkerControls.smoothCount);
+      runtimeControls.smoothTolerance.setValue(defaults.arMarkerControls.smoothTolerance);
+      runtimeControls.smoothThreshold.setValue(defaults.arMarkerControls.smoothThreshold);
+      runtimeControls.sourceType.setValue(defaults.arToolkitSource.sourceType);
+      runtimeControls.cameraParametersUrl.setValue(defaults.arToolkitContext.cameraParametersUrl);
+      runtimeControls.detectionMode.setValue(defaults.arToolkitContext.detectionMode);
+      runtimeControls.markerType.setValue(defaults.arMarkerControls.type);
+      runtimeControls.patternUrl.setValue(defaults.arMarkerControls.patternUrl);
+
+      config.setKey(
+        'project/arMarkerApp/camera/fov', defaults.camera.fov,
+        'project/arMarkerApp/camera/near', defaults.camera.near,
+        'project/arMarkerApp/camera/far', defaults.camera.far,
+        'project/arMarkerApp/marker/smooth', defaults.arMarkerControls.smooth,
+        'project/arMarkerApp/marker/smoothCount', defaults.arMarkerControls.smoothCount,
+        'project/arMarkerApp/marker/smoothTolerance', defaults.arMarkerControls.smoothTolerance,
+        'project/arMarkerApp/marker/smoothThreshold', defaults.arMarkerControls.smoothThreshold,
+        'project/arMarkerApp/source/sourceType', defaults.arToolkitSource.sourceType,
+        'project/arMarkerApp/context/cameraParametersUrl', defaults.arToolkitContext.cameraParametersUrl,
+        'project/arMarkerApp/context/detectionMode', defaults.arToolkitContext.detectionMode,
+        'project/arMarkerApp/marker/type', defaults.arMarkerControls.type,
+        'project/arMarkerApp/marker/patternUrl', defaults.arMarkerControls.patternUrl
+      );
+    });
+    resetRuntimeSettingsButton.setMarginBottom('10px');
+    content.add(resetRuntimeSettingsButton);
+  }
 
   // //Set Pattern is only needed for testing.
   // const setPatternButton = new UIButton('Set Pattern').onClick(async () => {
@@ -324,6 +597,7 @@ function SidebarMarkerGenerator(editor) {
   // Initial marker
   innerImageURL = extractSceneBackgroundAsDataURL();
   imageName = 'scene-background';
+  chosenFileNameText.setValue('Scene background');
   updateFullMarkerImage();
 
   return container;

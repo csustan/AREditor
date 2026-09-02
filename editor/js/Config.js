@@ -16,6 +16,18 @@ function Config() {
 		'project/renderer/shadowType': 1, // PCF
 		'project/renderer/toneMapping': 0, // NoToneMapping
 		'project/renderer/toneMappingExposure': 1,
+		'project/arMarkerApp/camera/fov': 70,
+		'project/arMarkerApp/camera/near': 0.05,
+		'project/arMarkerApp/camera/far': 1000,
+		'project/arMarkerApp/source/sourceType': 'webcam',
+		'project/arMarkerApp/context/cameraParametersUrl': './js/data/camera_para.dat',
+		'project/arMarkerApp/context/detectionMode': 'mono',
+		'project/arMarkerApp/marker/type': 'pattern',
+		'project/arMarkerApp/marker/patternUrl': './js/data/lambda.patt',
+		'project/arMarkerApp/marker/smooth': true,
+		'project/arMarkerApp/marker/smoothCount': 5,
+		'project/arMarkerApp/marker/smoothTolerance': 0.01,
+		'project/arMarkerApp/marker/smoothThreshold': 2,
 
 		'settings/history': false,
 		'settings/viewport/lightingPreview': 'off',

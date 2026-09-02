@@ -208,7 +208,94 @@ function SidebarMarkerGenerator(editor) {
     return title;
   }
 
-  function makeSettingRow(labelText, control, labelWidth = '110px') {
+  function makeInfoButton(infoText) {
+    const wrapper = document.createElement('span');
+    wrapper.style.position = 'relative';
+    wrapper.style.display = 'inline-flex';
+    wrapper.style.alignItems = 'center';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'i';
+    button.setAttribute('aria-label', `Information: ${infoText}`);
+    button.style.width = '16px';
+    button.style.height = '16px';
+    button.style.padding = '0';
+    button.style.border = '1px solid currentColor';
+    button.style.borderRadius = '50%';
+    button.style.background = 'transparent';
+    button.style.color = 'inherit';
+    button.style.font = 'bold 12px/14px sans-serif';
+    button.style.cursor = 'help';
+
+    const tooltip = document.createElement('span');
+    tooltip.textContent = infoText;
+    tooltip.style.display = 'none';
+    tooltip.style.position = 'fixed';
+    tooltip.style.width = '220px';
+    tooltip.style.maxWidth = 'calc(100vw - 16px)';
+    tooltip.style.boxSizing = 'border-box';
+    tooltip.style.padding = '7px 9px';
+    tooltip.style.background = '#fff';
+    tooltip.style.color = '#444';
+    tooltip.style.border = '1px solid #aaa';
+    tooltip.style.borderRadius = '3px';
+    tooltip.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+    tooltip.style.font = '12px/1.35 sans-serif';
+    tooltip.style.whiteSpace = 'normal';
+    tooltip.style.textAlign = 'left';
+    tooltip.style.zIndex = '2147483647';
+    tooltip.style.pointerEvents = 'none';
+
+    let pinned = false;
+    const positionTooltip = () => {
+      const buttonRect = button.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const viewportPadding = 8;
+      const gap = 5;
+      const maxLeft = Math.max(viewportPadding, window.innerWidth - tooltipRect.width - viewportPadding);
+      const left = Math.min(maxLeft, Math.max(viewportPadding, buttonRect.right - tooltipRect.width));
+      let top = buttonRect.bottom + gap;
+
+      if (top + tooltipRect.height > window.innerHeight - viewportPadding) {
+        top = buttonRect.top - tooltipRect.height - gap;
+      }
+
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${Math.max(viewportPadding, top)}px`;
+    };
+    const showTooltip = () => {
+      if (!tooltip.isConnected) document.body.appendChild(tooltip);
+      tooltip.style.display = 'block';
+      positionTooltip();
+      window.addEventListener('resize', positionTooltip);
+      window.addEventListener('scroll', positionTooltip, true);
+    };
+    const removeTooltip = () => {
+      tooltip.remove();
+      window.removeEventListener('resize', positionTooltip);
+      window.removeEventListener('scroll', positionTooltip, true);
+    };
+    const hideTooltip = () => {
+      if (!pinned) removeTooltip();
+    };
+
+    button.addEventListener('mouseenter', showTooltip);
+    button.addEventListener('mouseleave', hideTooltip);
+    button.addEventListener('focus', showTooltip);
+    button.addEventListener('blur', hideTooltip);
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      pinned = !pinned;
+      if (pinned) showTooltip();
+      else removeTooltip();
+    });
+
+    wrapper.appendChild(button);
+    return wrapper;
+  }
+
+  function makeSettingRow(labelText, control, labelWidth = '110px', infoText = null) {
     const row = new UIRow();
     row.setMarginBottom('8px');
     row.dom.style.display = 'flex';
@@ -216,6 +303,7 @@ function SidebarMarkerGenerator(editor) {
     row.dom.style.alignItems = 'center';
     row.dom.style.gap = '6px';
     row.add(new UIText(labelText).setWidth(labelWidth));
+    if (infoText) row.dom.appendChild(makeInfoButton(infoText));
     row.add(control);
     content.add(row);
     return row;
@@ -229,7 +317,7 @@ function SidebarMarkerGenerator(editor) {
     control.setWidth(options.width ?? '90px');
     control.setValue(getConfigNumber(key, fallback));
     control.onChange(() => config.setKey(key, control.getValue()));
-    makeSettingRow(labelText, control, options.labelWidth);
+    makeSettingRow(labelText, control, options.labelWidth, options.info);
     return control;
   }
 
@@ -238,7 +326,7 @@ function SidebarMarkerGenerator(editor) {
     control.setWidth(options.width ?? '170px');
     control.setValue(getConfigString(key, fallback));
     control.onChange(() => config.setKey(key, control.getValue()));
-    makeSettingRow(labelText, control, options.labelWidth);
+    makeSettingRow(labelText, control, options.labelWidth, options.info);
     return control;
   }
 
@@ -248,14 +336,14 @@ function SidebarMarkerGenerator(editor) {
     control.setOptions(options);
     control.setValue(getConfigString(key, fallback));
     control.onChange(() => config.setKey(key, control.getValue()));
-    makeSettingRow(labelText, control, rowOptions.labelWidth);
+    makeSettingRow(labelText, control, rowOptions.labelWidth, rowOptions.info);
     return control;
   }
 
   function makeCheckboxSetting(labelText, key, fallback, options = {}) {
     const control = new UICheckbox(getConfigBoolean(key, fallback));
     control.onChange(() => config.setKey(key, control.getValue()));
-    makeSettingRow(labelText, control, options.labelWidth);
+    makeSettingRow(labelText, control, options.labelWidth, options.info);
     return control;
   }
 
@@ -452,38 +540,46 @@ function SidebarMarkerGenerator(editor) {
       min: 1,
       max: 179,
       step: 1,
-      precision: 0
+      precision: 0,
+      info: 'Camera field of view in degrees. Higher values show a wider view; lower values zoom in.'
     }),
     cameraNear: makeNumberSetting('Camera Near', 'project/arMarkerApp/camera/near', AR_MARKER_APP_EXPORT_DEFAULTS.camera.near, {
       min: 0.001,
       max: 1000,
       step: 0.01,
-      precision: 3
+      precision: 3,
+      info: 'Closest distance rendered by the camera. Keep it above 0; very small values can reduce depth precision.'
     }),
     cameraFar: makeNumberSetting('Camera Far', 'project/arMarkerApp/camera/far', AR_MARKER_APP_EXPORT_DEFAULTS.camera.far, {
       min: 0.01,
       max: 100000,
       step: 10,
-      precision: 2
+      precision: 2,
+      info: 'Farthest distance rendered by the camera. Increase it if distant content is clipped.'
     }),
-    smooth: makeCheckboxSetting('Smoothing', 'project/arMarkerApp/marker/smooth', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.smooth),
+    smooth: makeCheckboxSetting('Smoothing', 'project/arMarkerApp/marker/smooth', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.smooth, {
+      info: 'Averages marker pose updates to reduce jitter, at the cost of responsiveness.'
+    }),
     smoothCount: makeNumberSetting('Smooth Count', 'project/arMarkerApp/marker/smoothCount', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.smoothCount, {
       min: 1,
       max: 100,
       step: 1,
-      precision: 0
+      precision: 0,
+      info: 'Number of recent tracking matrices averaged together. Higher values are smoother but follow movement more slowly.'
     }),
     smoothTolerance: makeNumberSetting('Smooth Tolerance', 'project/arMarkerApp/marker/smoothTolerance', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.smoothTolerance, {
       min: 0,
       max: 10,
       step: 0.01,
-      precision: 4
+      precision: 4,
+      info: 'Distance tolerance used by smoothing. Small changes below this tolerance can be ignored to reduce wobble.'
     }),
     smoothThreshold: makeNumberSetting('Smooth Threshold', 'project/arMarkerApp/marker/smoothThreshold', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.smoothThreshold, {
       min: 0,
       max: 100,
       step: 1,
-      precision: 0
+      precision: 0,
+      info: 'Number of matrices that must exceed the tolerance before tracking updates. Higher values reduce wobble but add delay.'
     })
   };
 
@@ -495,20 +591,30 @@ function SidebarMarkerGenerator(editor) {
       webcam: 'webcam',
       image: 'image',
       video: 'video'
+    }, {
+      info: 'Input used by AR.js for tracking: the webcam, a still image, or a video.'
     });
-    runtimeControls.cameraParametersUrl = makeTextSetting('Camera Params', 'project/arMarkerApp/context/cameraParametersUrl', AR_MARKER_APP_EXPORT_DEFAULTS.arToolkitContext.cameraParametersUrl);
+    runtimeControls.cameraParametersUrl = makeTextSetting('Camera Params', 'project/arMarkerApp/context/cameraParametersUrl', AR_MARKER_APP_EXPORT_DEFAULTS.arToolkitContext.cameraParametersUrl, {
+      info: 'Path to the camera calibration file used to match the virtual camera to the real camera.'
+    });
     runtimeControls.detectionMode = makeSelectSetting('Detection Mode', 'project/arMarkerApp/context/detectionMode', AR_MARKER_APP_EXPORT_DEFAULTS.arToolkitContext.detectionMode, {
       mono: 'mono',
       color: 'color',
       mono_and_matrix: 'mono_and_matrix',
       color_and_matrix: 'color_and_matrix'
+    }, {
+      info: 'Image-processing mode used to detect markers. Matrix modes enable matrix-code detection in addition to pattern detection.'
     });
     runtimeControls.markerType = makeSelectSetting('Marker Type', 'project/arMarkerApp/marker/type', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.type, {
       pattern: 'pattern',
       barcode: 'barcode',
       unknown: 'unknown'
+    }, {
+      info: 'Marker format AR.js should look for. Pattern markers use a .patt file.'
     });
-    runtimeControls.patternUrl = makeTextSetting('Pattern URL', 'project/arMarkerApp/marker/patternUrl', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.patternUrl);
+    runtimeControls.patternUrl = makeTextSetting('Pattern URL', 'project/arMarkerApp/marker/patternUrl', AR_MARKER_APP_EXPORT_DEFAULTS.arMarkerControls.patternUrl, {
+      info: 'Path to the .patt marker file that AR.js should load and track.'
+    });
 
     const resetRuntimeSettingsButton = new UIButton('Reset Export Settings').onClick(() => {
       const defaults = AR_MARKER_APP_EXPORT_DEFAULTS;

@@ -17,6 +17,71 @@ const DEFAULT_MARKER_PLANE_NAME = 'DefaultMarkerPlaneForScale';
 // Finds the generated settings block inside the APP.js template so Publish AR Marker App can replace only that block.
 const AR_MARKER_APP_EXPORT_SETTINGS_BLOCK = /\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_START__[\s\S]*?\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_END__/;
 
+const AR_QR_CODE_EXPORT_FILES = [
+	'Readme.md',
+	'index.html',
+	'package.json',
+	'styles.css',
+	'models/CubeScaleTest1.glb',
+	'models/CubeScaleTest1.json',
+	'models/CubeScaleTest1.stl',
+	'models/Shield037d.glb',
+	'models/StanStateSheildTest.glb',
+	'models/StanStateSheildTest.stl',
+	'scripts/jsqrcode/alignpat.js',
+	'scripts/jsqrcode/bitmat.js',
+	'scripts/jsqrcode/bmparser.js',
+	'scripts/jsqrcode/datablock.js',
+	'scripts/jsqrcode/databr.js',
+	'scripts/jsqrcode/datamask.js',
+	'scripts/jsqrcode/decoder.js',
+	'scripts/jsqrcode/detector.js',
+	'scripts/jsqrcode/errorlevel.js',
+	'scripts/jsqrcode/findpat.js',
+	'scripts/jsqrcode/formatinf.js',
+	'scripts/jsqrcode/gf256.js',
+	'scripts/jsqrcode/gf256poly.js',
+	'scripts/jsqrcode/grid.js',
+	'scripts/jsqrcode/qrcode.js',
+	'scripts/jsqrcode/qrworker.js',
+	'scripts/jsqrcode/rsdecoder.js',
+	'scripts/jsqrcode/version.js',
+	'src/config/render-config.json',
+	'src/fonts/optimer_regular.typeface.json',
+	'src/libs/GLTFLoader.js',
+	'src/libs/LegacyJSONLoader.js',
+	'src/libs/STLLoader.js',
+	'src/libs/blueimp-md5/md5.js',
+	'src/libs/js-aruco/src/posit1.js',
+	'src/libs/js-aruco/src/svd.js',
+	'src/libs/material.js',
+	'src/libs/three/three.js',
+	'src/main.js',
+	'src/qrclient.js'
+];
+
+async function createStaticTemplateZip(basePath, filePaths) {
+
+	const zip = new JSZip();
+
+	await Promise.all(filePaths.map(async function (filePath) {
+
+		const response = await fetch(basePath + filePath);
+
+		if (!response.ok) {
+
+			throw new Error('Unable to fetch ' + filePath + ': ' + response.status + ' ' + response.statusText);
+
+		}
+
+		zip.file(filePath, await response.blob());
+
+	}));
+
+	return zip.generateAsync({ type: 'blob' });
+
+}
+
 // Defaults mirror the previous hard-coded APP.js values so exports behave the same until a setting is provided.
 const AR_MARKER_APP_EXPORT_DEFAULTS = {
 	camera: {
@@ -1682,6 +1747,27 @@ option.onClick(async function () {
 options.add(option);
 
 //End Publish AR NFT App
+
+// Publish the unchanged AR QR code tracker template.
+option = new UIRow();
+option.setClass('option');
+option.setTextContent(strings.getKey('menubar/file/publish_arqr'));
+option.onClick(async function () {
+
+	try {
+
+		const content = await createStaticTemplateZip('../editor/files/ARQRCodeExportFiles/', AR_QR_CODE_EXPORT_FILES);
+		save(content, 'AR QR Code Tracker App.zip');
+
+	} catch (error) {
+
+		console.error('Error creating AR QR Code Tracker ZIP file:', error);
+		alert('The AR QR Code Tracker App could not be published.');
+
+	}
+
+});
+options.add(option);
 
 /////////////---------------------------------------//////////////
 /////////////---------------------------------------//////////////

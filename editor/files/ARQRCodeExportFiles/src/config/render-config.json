@@ -1,0 +1,129 @@
+{
+  "tracking": {
+    "qrSizeMillis": 1000, // Physical QR size hint passed to POSIT (affects translation/depth scale behavior).
+    "qrLostGraceMs": 200, // Keep overlay visible this long after QR disappears (milliseconds).
+    "scanIntervalMs": 0, // Minimum delay between decode attempts; 0 means attempt every frame.
+    "poseUpdateIntervalMs": 0, // Minimum delay between visible pose updates; 0 means apply every decoded frame.
+    "detectionConfidenceHoldMs": 300, // Keep last good pose this long across missed decode frames before hiding.
+    "maxCameraSize": 960 // Max camera dimension used for QR decode input before downscaling for performance.
+  },
+  "render": {
+    "camera": {
+      "fov": 75, // Perspective camera field of view.
+      "near": 1, // Near clipping plane.
+      "far": 10000, // Far clipping plane.
+      "z": 1000 // Camera position on Z axis.
+    },
+    "model": {
+      "path": "models/StanStateSheildTest.glb", // Path to model file served by your web server. Supported formats: .stl, .gltf, .glb, .json      // modelUnitScale: 1 GLB unit = 1 QR width by default. Override only if your model uses different units.
+      "jsonMode": "auto", // JSON loader mode: "auto" detects editor/app vs legacy; set "object" or "legacy" to force behavior.
+      "modelUnitScale": 1000, // This STL appears authored in normalized units; treat 1 model unit as 1 QR width.
+      "scale": 1, // AR.js convention: 1 GLB unit = 1 QR code width. A 0.5-unit cube appears at half the QR size.
+      "placement": {
+        // "mode": "origin", // Old mode for quick comparison (artist pivot preserved).
+        // "mode": "originXY_bboxZ", // Hybrid mode: keep artist X/Y pivot, but auto-anchor Z to bbox face.
+        "mode": "bbox", // Active mode: centers model bounds in X/Y + bbox Z anchoring.
+        "bboxZFace": "max" // Used by mode="bbox" and mode="originXY_bboxZ": choose "max" or "min" Z face for marker-plane contact.
+      },
+      "positionOffset": {
+        "x": 0, // Extra X position offset applied on top of QR pose translation.
+        "y": 0, // Extra Y position offset applied on top of QR pose translation.
+        "z": 0 // Extra Z position offset applied on top of QR pose translation.
+      },
+      "rotationOffset": {
+        "x": 0, // You can rotaate by -1.57079632679 (-PI/2) aligns Y-up models so QR acts as ground plane.
+        "y": 0, // Extra Y rotation (radians) applied on top of QR pose.
+        "z": 0 // Extra Z rotation (radians) applied on top of QR pose.
+      },
+      "fadeEnabled": false, // Master toggle for visibility fade: true = lerped fade, false = instant show/hide.
+      "fadeDelayMs": 700, // Milliseconds to wait after last good detection before fade-out starts.
+      "fadeDurationMs": 450, // Milliseconds for fade-out to complete once fade begins.
+      "visibilityLerp": {
+        "enabled": true, // Fade model visibility in/out instead of instantly toggling it.
+        "factor": 0.08 // Lower values fade more slowly; 1 disables visible interpolation even if enabled.
+      },
+      "scaleSmoothing": {
+        "enabled": false, // Smooth final rendered scale after all scale multipliers are combined.
+        "factor": 0.2 // Lower values smooth scale changes more; 1 applies scale immediately.
+      },
+      "material": {
+        "color": 13421772, // Base mesh color (decimal form of hex, e.g. 16777215 = white).
+        "specular": 2236962, // Specular highlight color.
+        "shininess": 30, // Specular intensity; higher values create tighter highlights.
+        "debugWireframe": false // Draw model as wireframe for visibility/debugging.
+      }
+    },
+    "cube": {
+      "width": 400, // Cube width in scene units.
+      "height": 400, // Cube height in scene units.
+      "depth": 400 // Cube depth in scene units.
+    },
+    "light": {
+      "x": -20, // Point light X position.
+      "y": 200, // Point light Y position.
+      "z": 1000, // Point light Z position.
+      "intensity": 1 // Default point light intensity used when model files do not provide lights.
+    },
+    "text": {
+      "enabled": false, // Display QR code data as 3D text label above the model.
+      "yOffset": -400, // Vertical label offset relative to tracked object.
+      "zOffset": 50 // Depth label offset relative to tracked object.
+    }
+  },
+  "pose": {
+    "translationScaleX": 2, // Divisor for X translation; lower values make motion more sensitive.
+    "translationScaleY": 2, // Divisor for Y translation; lower values make motion more sensitive.
+    "zReference": 4500, // Reference depth used to remap POSIT depth to scene Z.
+    "zScale": 7, // Divisor for depth conversion; higher values reduce Z movement.
+    "farDepthCompensation": 0, // Legacy fallback. Leave at 0 when sizeBasedScaling is enabled.
+    "translationDeadzone": 0, // Ignore tiny per-update translation deltas below this threshold on X/Y/Z.
+    "maxPositionStep": 0, // Clamp the largest allowed X/Y/Z translation jump per pose update; 0 disables clamping.
+    "maxRotationStep": 0, // Clamp the largest allowed rotation jump (radians) per pose update; 0 disables clamping.
+    "sizeBasedScaling": {
+      "enabled": true, // Scale model from measured QR pixel size each frame.
+      "referenceEdgePx": 0, // 0 = auto-calibrate from first tracked frame; set a fixed value for repeatable calibration.
+      "smoothingFactor": 0.25, // Smooths scale updates; lower is steadier, higher is more responsive.
+      "minMultiplier": 0.25, // Lower clamp for dynamic scale multiplier.
+      "maxMultiplier": 2 // Upper clamp for dynamic scale multiplier.
+    },
+    "rotationPrecision": 100, // Rotation rounding factor (100 = 2 decimal places).
+    "rotationDeadzone": 0.3, // Ignore tiny rotation values below this threshold to reduce jitter.
+    "smoothing": {
+      "enabled": true, // Enable interpolation smoothing on position and rotation.
+      "factor": 0.25 // Smoothing blend amount per frame (lower = smoother but laggier).
+    },
+    "axisSmoothing": {
+      "enabled": false, // Override position smoothing per axis instead of using one shared factor.
+      "xFactor": 0.15, // X-axis smoothing amount when axisSmoothing is enabled.
+      "yFactor": 0.15, // Y-axis smoothing amount when axisSmoothing is enabled.
+      "zFactor": 0.1 // Z-axis smoothing amount when axisSmoothing is enabled.
+    },
+    "rotationSmoothing": {
+      "enabled": true, // Separate rotation-only smoothing so spin can be calmer than translation.
+      "factor": 0.1 // Lower values smooth rotation more; 0.08 is a good starting point.
+    },
+    "rotationAxisSmoothing": {
+      "enabled": false, // Override rotation smoothing per axis instead of using one shared factor.
+      "xFactor": 0.04, // X-axis rotation smoothing amount when rotationAxisSmoothing is enabled.
+      "yFactor": 0.04, // Y-axis rotation smoothing amount when rotationAxisSmoothing is enabled.
+      "zFactor": 0.03 // Z-axis rotation smoothing amount when rotationAxisSmoothing is enabled.
+    }
+  },
+  "arjs": {
+    "qrPoseBridge": {
+      "performanceFallback": {
+        "enabled": true, // Enable automatic downgrade when FPS remains low.
+        "minFps": 20, // Trigger fallback when measured FPS stays below this value.
+        "lowFpsDurationMs": 3000, // How long FPS must stay low before fallback activates.
+        "sourceWidth": 960, // Lower camera capture width used after fallback.
+        "sourceHeight": 540, // Lower camera capture height used after fallback.
+        "displayWidth": 960, // Target display width for ARToolkit source after fallback.
+        "displayHeight": 540, // Target display height for ARToolkit source after fallback.
+        "canvasWidth": 960, // ARToolkit processing canvas width after fallback.
+        "canvasHeight": 540, // ARToolkit processing canvas height after fallback.
+        "maxDetectionRate": 30, // Detection FPS cap after fallback.
+        "qrMaxCameraSize": 960 // QR decode max dimension after fallback downscaling.
+      }
+    }
+  }
+}

@@ -129,7 +129,6 @@ function Viewport( editor ) {
 	grid2.material.vertexColors = false;
 	grid.add( grid2 );
 
-	const viewHelper = new ViewHelper( camera, container );
 	const vr = new VR( editor );
 
 
@@ -363,6 +362,9 @@ function Viewport( editor ) {
 	// otherwise controls.enabled doesn't work.
 
 	const controls = new EditorControls( camera, container.dom );
+	// ViewHelper needs the same EditorControls instance as the viewport so a
+	// saved pose includes the orbit center and can emit the normal change event.
+	const viewHelper = new ViewHelper( camera, container, controls );
 	controls.addEventListener( 'change', function () {
 
 		signals.cameraChanged.dispatch( camera );
@@ -376,6 +378,9 @@ function Viewport( editor ) {
 	signals.editorCleared.add( function () {
 
 		controls.center.set( 0, 0, 0 );
+		// Resetting the orbit center can change whether this is the home pose even
+		// when the camera's position and rotation did not change.
+		viewHelper.updateCameraState();
 		render();
 
 	} );
@@ -474,6 +479,9 @@ function Viewport( editor ) {
 
 	signals.cameraChanged.add( function () {
 
+		// Orbit, pan, zoom, focus, and applyPose() all reach this signal through
+		// EditorControls. Updating here keeps the button label in sync with them.
+		viewHelper.updateCameraState();
 		render();
 
 	} );
@@ -706,6 +714,9 @@ function Viewport( editor ) {
 		// disable EditorControls when setting a user camera
 
 		controls.enabled = ( viewportCamera === editor.camera );
+		// The Home/Last button moves only the editor camera, so mirror the controls'
+		// disabled state while the viewport is looking through a scene camera.
+		viewHelper.updateCameraState();
 
 		render();
 
@@ -772,7 +783,14 @@ function Viewport( editor ) {
 
 	} );
 
-	signals.cameraResetted.add( updateAspectRatio );
+	signals.cameraResetted.add( function () {
+
+		updateAspectRatio();
+		// A reset happens during New/Clear and project loading. Discard history from
+		// the previous camera so Last Position cannot cross project boundaries.
+		viewHelper.resetCameraHistory();
+
+	} );
 
 	// animations
 
@@ -805,6 +823,9 @@ function Viewport( editor ) {
 		if ( viewHelper.animating === true ) {
 
 			viewHelper.update( delta );
+			// Axis-gizmo animation changes the camera directly rather than through
+			// EditorControls, so it needs its own button-state update on every frame.
+			viewHelper.updateCameraState();
 			needsUpdate = true;
 
 		}

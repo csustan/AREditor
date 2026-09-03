@@ -17,17 +17,16 @@ const DEFAULT_MARKER_PLANE_NAME = 'DefaultMarkerPlaneForScale';
 // Finds the generated settings block inside the APP.js template so Publish AR Marker App can replace only that block.
 const AR_MARKER_APP_EXPORT_SETTINGS_BLOCK = /\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_START__[\s\S]*?\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_END__/;
 
+const AR_QR_CODE_TEMPLATE_BASE_PATH = '../editor/files/ARQRCodeExportFiles/';
+const AR_QR_CODE_CONFIG_PATH = 'src/config/render-config.json';
+const AR_QR_CODE_MODEL_PATH = 'models/model.glb';
+const AR_QR_CODE_MODEL_PATH_PATTERN = /("model"\s*:\s*\{[\s\S]*?"path"\s*:\s*)"[^"]*"/;
+
 const AR_QR_CODE_EXPORT_FILES = [
 	'Readme.md',
 	'index.html',
 	'package.json',
 	'styles.css',
-	'models/CubeScaleTest1.glb',
-	'models/CubeScaleTest1.json',
-	'models/CubeScaleTest1.stl',
-	'models/Shield037d.glb',
-	'models/StanStateSheildTest.glb',
-	'models/StanStateSheildTest.stl',
 	'scripts/jsqrcode/alignpat.js',
 	'scripts/jsqrcode/bitmat.js',
 	'scripts/jsqrcode/bmparser.js',
@@ -46,7 +45,6 @@ const AR_QR_CODE_EXPORT_FILES = [
 	'scripts/jsqrcode/qrworker.js',
 	'scripts/jsqrcode/rsdecoder.js',
 	'scripts/jsqrcode/version.js',
-	'src/config/render-config.json',
 	'src/fonts/optimer_regular.typeface.json',
 	'src/libs/GLTFLoader.js',
 	'src/libs/LegacyJSONLoader.js',
@@ -60,23 +58,53 @@ const AR_QR_CODE_EXPORT_FILES = [
 	'src/qrclient.js'
 ];
 
-async function createStaticTemplateZip(basePath, filePaths) {
+function injectARQRCodeModelPath(configContent) {
+
+	if (!AR_QR_CODE_MODEL_PATH_PATTERN.test(configContent)) {
+
+		throw new Error('The QR tracker model path was not found in ' + AR_QR_CODE_CONFIG_PATH + '.');
+
+	}
+
+	return configContent.replace(AR_QR_CODE_MODEL_PATH_PATTERN, function (match, prefix) {
+
+		return prefix + JSON.stringify(AR_QR_CODE_MODEL_PATH);
+
+	});
+
+}
+
+async function fetchARQRCodeTemplateFile(filePath) {
+
+	const response = await fetch(AR_QR_CODE_TEMPLATE_BASE_PATH + filePath);
+
+	if (!response.ok) {
+
+		throw new Error('Unable to fetch ' + filePath + ': ' + response.status + ' ' + response.statusText);
+
+	}
+
+	return response;
+
+}
+
+async function createARQRCodeTrackerZip(generatedFiles) {
 
 	const zip = new JSZip();
 
-	await Promise.all(filePaths.map(async function (filePath) {
+	await Promise.all(AR_QR_CODE_EXPORT_FILES.map(async function (filePath) {
 
-		const response = await fetch(basePath + filePath);
-
-		if (!response.ok) {
-
-			throw new Error('Unable to fetch ' + filePath + ': ' + response.status + ' ' + response.statusText);
-
-		}
+		const response = await fetchARQRCodeTemplateFile(filePath);
 
 		zip.file(filePath, await response.blob());
 
 	}));
+
+	for (const filePath in generatedFiles) {
+
+		zip.file(filePath, generatedFiles[filePath]);
+
+	}
 
 	return zip.generateAsync({ type: 'blob' });
 
@@ -1748,7 +1776,7 @@ options.add(option);
 
 //End Publish AR NFT App
 
-// Publish the unchanged AR QR code tracker template.
+// Publish the AR QR code tracker template with the current editor scene as its model.
 option = new UIRow();
 option.setClass('option');
 option.setTextContent(strings.getKey('menubar/file/publish_arqr'));
@@ -1756,7 +1784,19 @@ option.onClick(async function () {
 
 	try {
 
-		const content = await createStaticTemplateZip('../editor/files/ARQRCodeExportFiles/', AR_QR_CODE_EXPORT_FILES);
+		const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
+		const scene = createSceneCloneWithoutNamedObjects(editor.scene, [DEFAULT_MARKER_PLANE_NAME]);
+		const animations = getAnimations(scene);
+		const exporter = new GLTFExporter();
+		const [model, configResponse] = await Promise.all([
+			exporter.parseAsync(scene, { binary: true, animations: animations }),
+			fetchARQRCodeTemplateFile(AR_QR_CODE_CONFIG_PATH)
+		]);
+		const renderConfig = injectARQRCodeModelPath(await configResponse.text());
+		const content = await createARQRCodeTrackerZip({
+			[AR_QR_CODE_CONFIG_PATH]: renderConfig,
+			[AR_QR_CODE_MODEL_PATH]: model
+		});
 		save(content, 'AR QR Code Tracker App.zip');
 
 	} catch (error) {

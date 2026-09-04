@@ -235,6 +235,15 @@ var canvas, img, context, video, start, streaming, detector, lastBC, posit, scan
   // Core Three.js objects: the scene owns objects, the camera defines the view,
   // and the renderer draws that view into a WebGL canvas.
 var scene, camera, renderer;
+  // An AnimationMixer acts like a playback controller for animation clips. Keep
+  // every active mixer here so the existing frame loop can advance all of them.
+var animationMixers = [];
+  // Each registration remembers which clips have already started on one root.
+  // This prevents a repeated helper call from restarting or duplicating actions.
+var animationRegistrations = [];
+  // requestAnimationFrame timestamps are milliseconds; saving the previous one
+  // lets step() calculate the elapsed seconds required by AnimationMixer.update().
+var previousAnimationTimestamp = null;
   // References to the loaded model and optional 3D text. geometry and material are
   // legacy declarations; the active model is stored in mesh.
 var geometry, material, mesh, textGeometry, textMesh, textGroup;
@@ -474,6 +483,94 @@ function applyVisibilityAlpha(root, alpha) {
       setOpacityOnMaterial(material, alpha);
     });
   });
+}
+
+/**
+ * Start each animation clip once on a particular imported object hierarchy.
+ *
+ * A clip contains keyframes, such as a character's bone rotations over time. An
+ * AnimationMixer evaluates those keyframes and writes the resulting transforms
+ * onto objects below `root`. One mixer can play several clips simultaneously.
+ */
+function startAnimationClips(root, clips) {
+  if (!root || !Array.isArray(clips) || clips.length === 0) {
+    return 0;
+  }
+
+  var registration = null;
+  var registrationIndex;
+
+  // Reuse an existing mixer if this root has already registered other clips.
+  for (registrationIndex = 0; registrationIndex < animationRegistrations.length; registrationIndex++) {
+    if (animationRegistrations[registrationIndex].root === root) {
+      registration = animationRegistrations[registrationIndex];
+      break;
+    }
+  }
+
+  var alreadyStarted = registration ? registration.clips : [];
+  var clipsToStart = [];
+
+  clips.forEach(function(clip) {
+    // Ignore missing entries and duplicate references in this or an earlier call.
+    if (!clip || alreadyStarted.indexOf(clip) !== -1 || clipsToStart.indexOf(clip) !== -1) {
+      return;
+    }
+    clipsToStart.push(clip);
+  });
+
+  // Static models reach this branch with no clips and incur no mixer updates.
+  if (clipsToStart.length === 0) {
+    return 0;
+  }
+
+  var mixer = registration ? registration.mixer : new THREE.AnimationMixer(root);
+  var startedCount = 0;
+
+  clipsToStart.forEach(function(clip) {
+    try {
+      // clipAction creates a playable action; play() uses Three.js's default loop.
+      mixer.clipAction(clip).play();
+      alreadyStarted.push(clip);
+      startedCount++;
+    } catch (error) {
+      // One malformed clip should not prevent other clips or the model from loading.
+      console.warn('Unable to start animation clip:', clip.name || '(unnamed)', error);
+    }
+  });
+
+  // Do not retain an empty mixer when every supplied clip was unusable.
+  if (!registration && startedCount > 0) {
+    animationRegistrations.push({
+      root: root,
+      mixer: mixer,
+      clips: alreadyStarted
+    });
+    animationMixers.push(mixer);
+  }
+
+  if (startedCount > 0) {
+    console.log('Started model animation clips:', startedCount);
+  }
+
+  return startedCount;
+}
+
+/** Start clips attached by ObjectLoader to objects in a parsed JSON hierarchy. */
+function startObjectAnimations(root) {
+  if (!root || !root.traverse) {
+    return 0;
+  }
+
+  var startedCount = 0;
+  root.traverse(function(object) {
+    if (object && Array.isArray(object.animations) && object.animations.length > 0) {
+      // Rooting the mixer here lets clip track names resolve below this object.
+      startedCount += startAnimationClips(object, object.animations);
+    }
+  });
+
+  return startedCount;
 }
 
 // ---------------------------------------------------------------------------
@@ -804,9 +901,13 @@ function loadTrackedMesh(sceneRef, onReady) {
       function(gltf) {
         // A glTF loader returns a wrapper; its `.scene` is the root 3D object.
         var gltfLightInfo = detectEmbeddedLights(gltf.scene);
+        var trackedGltf = createTrackedGroupFromGltf(gltf.scene, unitScale, ext);
         logEmbeddedLighting(ext, modelPath, gltfLightInfo);
+        // GLTFLoader stores imported clips on the result, not reliably on scene.
+        // The scene remains the correct mixer root after entering tracking groups.
+        startAnimationClips(gltf.scene, gltf.animations);
         // Hand both the prepared model and lighting summary back to startApp().
-        onReady(createTrackedGroupFromGltf(gltf.scene, unitScale, ext), gltfLightInfo);
+        onReady(trackedGltf, gltfLightInfo);
       },
       undefined,
       function(error) {
@@ -842,8 +943,11 @@ function loadTrackedMesh(sceneRef, onReady) {
         if (resolvedJsonType === 'object') {
           var objectRoot = parseObjectModelFromJson(jsonData);
           var objectJsonLightInfo = detectEmbeddedLights(objectRoot);
+          var trackedObject = createTrackedGroupFromGltf(objectRoot, unitScale, ext);
           logEmbeddedLighting(ext, modelPath, objectJsonLightInfo);
-          onReady(createTrackedGroupFromGltf(objectRoot, unitScale, ext), objectJsonLightInfo);
+          // ObjectLoader attaches each parsed clip array to its owning object.
+          startObjectAnimations(objectRoot);
+          onReady(trackedObject, objectJsonLightInfo);
           return;
         }
 
@@ -1523,10 +1627,25 @@ function startApp() {
     /**
      * Process one browser animation opportunity, then schedule the next one.
      *
-     * requestAnimationFrame supplies a high-resolution `timestamp`, although this
-     * implementation uses Date.now() for consistency with its other timers.
+     * requestAnimationFrame supplies a high-resolution timestamp in milliseconds.
+     * Animation mixers use it here; QR hold and scan timers continue using Date.now().
      */
     function step(timestamp) {
+      // The first frame has no previous timestamp, so its safe elapsed time is 0.
+      // Dividing by 1000 converts later frame gaps from milliseconds to seconds,
+      // which is the time unit required by THREE.AnimationMixer.update().
+      var deltaSeconds = 0;
+      var mixerIndex;
+      if (previousAnimationTimestamp !== null) {
+        deltaSeconds = Math.max(0, (timestamp - previousAnimationTimestamp) / 1000);
+      }
+      previousAnimationTimestamp = timestamp;
+
+      // Advance animation independently from QR scans, pose throttling, and model
+      // visibility. Losing and reacquiring the QR therefore does not restart clips.
+      for (mixerIndex = 0; mixerIndex < animationMixers.length; mixerIndex++) {
+        animationMixers[mixerIndex].update(deltaSeconds);
+      }
 
       // QR decoding runs in a worker, but copying pixels and sending requests
       // still starts here. `scanning` prevents overlapping worker requests, which

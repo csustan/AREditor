@@ -223,81 +223,7 @@ function injectARMarkerAppExportSettings(appJSContent, settings) {
 
 }
 
-// Removes the named "editor-only" objects from a cloned export payload *before* the app.json is written.
-function removeNamedObjectsFromExportData(data, objectNamesToRemove) {
-
-	// Keep the requested names in an array.
-	const namesToRemove = objectNamesToRemove || [];
-	// Track any removed object UUIDs in a plain array so related script entries can also be removed.
-	const removedUUIDs = [];
-	// Clone the serialized export data so this function never mutates the live editor state (don't mess with the artist's envireoment).
-	const clonedData = JSON.parse(JSON.stringify(data));
-
-	// Walk the serialized scene tree recursively and remove matching children by name.
-	function stripChildren(node) {
-
-		// Ignore any missing or non-object nodes during the recursive walk.
-		if (!node || typeof node !== 'object') return node;
-
-		// Only process the nodes that actually have serialized children.
-		if (Array.isArray(node.children)) {
-
-			// Rebuild the children list, but without any objects whose names match the removal list.
-			node.children = node.children
-				.filter(function (child) {
-
-					// Check whether this child is one of the named helper objects in the remove list.
-					const shouldRemove = child && namesToRemove.includes(child.name);
-
-					// Save the UUID before removal so any matching script entries can be deleted later.
-					if (shouldRemove && child.uuid && removedUUIDs.includes(child.uuid) === false) {
-
-						// Store the UUID of the object that was removed.
-						removedUUIDs.push(child.uuid);
-
-					}
-
-					// Keep every child *except* for the named helper objects that were marked for removal.
-					return !shouldRemove;
-
-				})
-				// Continue recursively through all remaining children in the export tree.
-				.map(stripChildren);
-
-		}
-
-		// Return the processed node so recursion can continue upward unchanged.
-		return node;
-
-	}
-
-	// editor.toJSON() wraps the actual scene graph under scene.object.
-	if (clonedData.scene && clonedData.scene.object) {
-
-		// Start the recursive removal walk at the root serialized scene object.
-		stripChildren(clonedData.scene.object);
-
-	}
-
-	// Store the script entries separately from the scene graph in the editor exports.
-	if (clonedData.scripts && typeof clonedData.scripts === 'object') {
-
-		// Remove any script "bucket" that belongs to an object stripped from the export.
-		for (const uuid of removedUUIDs) {
-
-			// Delete the removed object's script entry so the export stays internally consistent.
-			delete clonedData.scripts[uuid];
-
-		}
-
-	}
-
-	// Return the cleaned export payload for Publish AR Marker App to save into app.json.
-	return clonedData;
-
-}
-
-// Removes the named "editor-only" objects from a cloned THREE.Scene *before* GLTF export is written.
+// Removes named editor-only objects from a cloned scene before JSON or GLTF export is written.
 function createSceneCloneWithoutNamedObjects(scene, objectNamesToRemove) {
 
 	// Clone the live scene so export cleanup never changes the editor's working scene.
@@ -306,6 +232,21 @@ function createSceneCloneWithoutNamedObjects(scene, objectNamesToRemove) {
 	const namesToRemove = objectNamesToRemove || [];
 	// Queue the matching objects first so scene traversal is not disrupted while removing them.
 	const objectsToRemove = [];
+
+	function preserveObjectUUIDs(sourceObject, clonedObject) {
+
+		clonedObject.uuid = sourceObject.uuid;
+
+		for (let index = 0; index < sourceObject.children.length; index++) {
+
+			preserveObjectUUIDs(sourceObject.children[index], clonedObject.children[index]);
+
+		}
+
+	}
+
+	// Keep UUID-keyed editor scripts connected to their cloned objects in JSON exports.
+	preserveObjectUUIDs(scene, sceneClone);
 
 	// Walk the cloned scene and collect every object whose name is on the removal list.
 	sceneClone.traverse(function (object) {
@@ -333,6 +274,30 @@ function createSceneCloneWithoutNamedObjects(scene, objectNamesToRemove) {
 
 	// Return the cleaned clone for exporters such as GLTFExporter.
 	return sceneClone;
+
+}
+
+function createEditorExportDataWithoutNamedObjects(editor, objectNamesToRemove) {
+
+	const sceneClone = createSceneCloneWithoutNamedObjects(editor.scene, objectNamesToRemove);
+	const data = editor.toJSON();
+	const scripts = {};
+
+	data.scene = sceneClone.toJSON();
+
+	for (const uuid in data.scripts) {
+
+		if (sceneClone.getObjectByProperty('uuid', uuid, true) !== undefined) {
+
+			scripts[uuid] = data.scripts[uuid];
+
+		}
+
+	}
+
+	data.scripts = scripts;
+
+	return data;
 
 }
 
@@ -868,9 +833,7 @@ function MenubarFile(editor) {
 
 
 		//prepare to build the app.json file for export
-		let output = editor.toJSON();
-		// Strip the editor-only default marker plane from the exported app data, but not from the live scene.
-		output = removeNamedObjectsFromExportData(output, [DEFAULT_MARKER_PLANE_NAME]);
+		let output = createEditorExportDataWithoutNamedObjects(editor, [DEFAULT_MARKER_PLANE_NAME]);
 		output.metadata.type = 'App';
 		delete output.history;
 
@@ -1430,8 +1393,7 @@ option.onClick(async function () {
 	var zip = new JSZip();
 
 	// Export app.json (ObjectLoader format) — fully preserves ShaderMaterial and editor scripts
-	let outputForARNFT = editor.toJSON();
-	outputForARNFT = removeNamedObjectsFromExportData(outputForARNFT, [DEFAULT_MARKER_PLANE_NAME]);
+	let outputForARNFT = createEditorExportDataWithoutNamedObjects(editor, [DEFAULT_MARKER_PLANE_NAME]);
 	outputForARNFT.metadata.type = 'App';
 	delete outputForARNFT.history;
 	toZipForARNFT['app.json'] = JSON.stringify(outputForARNFT, null, '\t');

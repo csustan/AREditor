@@ -1746,6 +1746,7 @@ option.onClick(async function () {
 
 	try {
 
+		const appTitle = config.getKey('project/title') || 'AR QR Code Tracker App';
 		const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
 		const scene = createSceneCloneWithoutNamedObjects(editor.scene, [DEFAULT_MARKER_PLANE_NAME]);
 		const animations = getAnimations(scene);
@@ -1759,7 +1760,7 @@ option.onClick(async function () {
 			[AR_QR_CODE_CONFIG_PATH]: renderConfig,
 			[AR_QR_CODE_MODEL_PATH]: model
 		});
-		save(content, 'AR QR Code Tracker App.zip');
+		save(content, appTitle + '.zip');
 
 	} catch (error) {
 

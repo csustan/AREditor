@@ -48,6 +48,8 @@ var DEFAULT_APP_CONFIG = {
   },
   // Defaults that describe the virtual Three.js scene and optional text label.
   render: {
+    // Text shown in the browser tab or window title bar.
+    pageTitle: 'QR AR 3D',
     // A PerspectiveCamera imitates the way distant objects look smaller.
     camera: {
       // Vertical field of view, measured in degrees.
@@ -184,6 +186,17 @@ function deepMerge(target, source) {
   return output;
 }
 
+/** Apply the configured browser-tab title, falling back for blank/bad values. */
+function applyConfiguredPageTitle() {
+  var configuredTitle = APP_CONFIG && APP_CONFIG.render && APP_CONFIG.render.pageTitle;
+
+  if (typeof configuredTitle !== 'string' || configuredTitle.trim() === '') {
+    configuredTitle = DEFAULT_APP_CONFIG.render.pageTitle;
+  }
+
+  document.title = configuredTitle;
+}
+
 /**
  * Load and merge render-config.json before camera or graphics setup begins.
  *
@@ -215,6 +228,10 @@ function loadAppConfig() {
       // a fresh defaults copy and leave an explanation in developer tools.
       APP_CONFIG = JSON.parse(JSON.stringify(DEFAULT_APP_CONFIG));
       console.warn('Falling back to default app config:', error.message || error);
+    })
+    .then(function() {
+      // The file can override the initial default title applied during startup.
+      applyConfiguredPageTitle();
     });
 }
 
@@ -1729,6 +1746,8 @@ function bootstrap() {
 // Scripts can execute before the HTML parser has created the video/canvas nodes.
 // If so, wait for DOMContentLoaded; otherwise bootstrap immediately. Registering
 // only one path guarantees that camera initialization starts once.
+// Set a useful title immediately; loadAppConfig() replaces it if config differs.
+applyConfiguredPageTitle();
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', bootstrap);
 } else {

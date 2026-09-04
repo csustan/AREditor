@@ -9,6 +9,7 @@
     "trackMatchingQRCodeData": "" // Exact QR data to track; empty string keeps the standard first-detected QR behavior.
   },
   "render": {
+    "pageTitle": "QR AR 3D", // Text displayed in the browser tab or window title bar.
     "camera": {
       "fov": 75, // Perspective camera field of view.
       "near": 1, // Near clipping plane.

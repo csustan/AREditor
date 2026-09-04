@@ -280,6 +280,10 @@ Values below are shown as `main.js default` / `render-config.json value` when th
 - `tracking.maxCameraSize` — max camera dimension fed into QR decoding before downscaling; lower is faster but less accurate. `800` / `960`.
 - `tracking.trackMatchingQRCodeData` — exact, case-sensitive QR payload to track. An empty string accepts the decoder's normal first result. Default/value: `""`.
 
+### render
+
+- `render.pageTitle` — text displayed in the browser tab or window title bar. Change this string in `render-config.json` to rename the page without editing `index.html`. A missing, non-string, or blank value falls back to `"QR AR 3D"`.
+
 ### render.camera
 
 - `render.camera.fov` — perspective camera field of view. Default/value: `75`.

@@ -2,9 +2,9 @@ Augmented Reality QR code tracker
 =====================================
 
 
-This Augmented Reality application tracks QR codes and places 3D models on it. The application acocmplishes this by identifying the QR code displayed on a camera, measuring the scale, position, and distortion of hte QR Code, then sending their information to ThreeJS to place the model. Multiple model formats are supported: STL (binary/ASCII), glTF 2.0 (`.gltf` / `.glb`), and legacy Three.js JSON format.
+This Augmented Reality application tracks QR codes and places 3D models on it. The application acocmplishes this by identifying the QR code displayed on a camera, measuring the scale, position, and distortion of hte QR Code, then sending their information to ThreeJS to place the model. Multiple model formats are supported: STL (binary/ASCII), glTF 2.0 (`.gltf` / `.glb`), legacy Three.js JSON, and Three.js Object/Editor JSON.
 
-The tracking application does not differnetniate between QR Codes, although this could be accomplished by reading the QR Code data and preforming a boolean check to match pre-suplied data prior to rendering the model.
+The tracker can optionally target one QR code by requiring an exact, case-sensitive payload match. Leave `tracking.trackMatchingQRCodeData` empty to preserve the original behavior of accepting the first decoded QR code.
 
 This is based off the ar3d github project found at https://github.com/jeromeetienne/ar3d
 
@@ -17,6 +17,8 @@ which could be previewed at: [https://ar3d.surge.sh](https://ar3d.surge.sh)
 This app first tries the native [Shape Detection API](https://wicg.github.io/shape-detection-api/#barcode-detection-api) (`BarcodeDetector`) to detect and anlize the QR Code.
 
 If `BarcodeDetector` is unavailable in the browser, or it fails to run, the app automatically falls back to the local QR decoder library under [scripts/jsqrcode](scripts/jsqrcode).
+
+Set `tracking.trackMatchingQRCodeData` in [src/config/render-config.json](src/config/render-config.json) to the exact text encoded in the QR code that should control the model. The native `BarcodeDetector` path checks every QR result in a frame for that match. The bundled software fallback can decode at most one candidate per frame, so it accepts that candidate only when its payload matches.
 
 Unlike the original ar3d project, this app does not need experimental browser flags for the fallback path.
 
@@ -31,7 +33,7 @@ The libraries used in this project are listed in the following table -- the link
 
 | Library/component Name | Local file(s) used and location | Original source | Version/data in source | License | Purpose |
 |---|---|---|---|---|---|
-| three.js | [src/libs/three/three.js](src/libs/three/three.js) | [three.js GitHub](https://github.com/mrdoob/three.js) | Runtime reports `THREE.WebGLRenderer 86`; source contains `REVISION = '86'` | MIT (three.js standard license) | Core 3D scene, camera, mesh, text rendering |
+| three.js | [src/libs/three/three.js](src/libs/three/three.js) | [three.js GitHub](https://github.com/mrdoob/three.js) | Source contains `REVISION = '132'` | MIT (three.js standard license) | Core 3D scene, camera, mesh, text, and animation rendering |
 | AR.js + jsartoolkit5 marker stack | Removed from this lightweight copy (legacy files were previously under scripts/js) | [AR.js GitHub](https://github.com/AR-js-org/AR.js) and [jsartoolkit5 GitHub](https://github.com/artoolkitx/jsartoolkit5) | N/A in this copy | AR.js/jsartoolkit5 upstream license terms (commonly LGPL-3.0/BSD-style components, depending on upstream submodule) | Legacy marker-based AR pipeline (not used by the current QR runtime) |
 | JavaScript MD5 (blueimp) | [src/libs/blueimp-md5/md5.js](src/libs/blueimp-md5/md5.js) | [blueimp JavaScript-MD5 GitHub](https://github.com/blueimp/JavaScript-MD5) | Header shows Copyright 2011; includes reference to Paul Johnston implementation (`Version 2.2`, 1999-2009) | MIT (with historical BSD attribution in header comments) | Utility library |
 | js-aruco POS (pose estimation) | [src/libs/js-aruco/src/posit1.js](src/libs/js-aruco/src/posit1.js), [src/libs/js-aruco/src/svd.js](src/libs/js-aruco/src/svd.js) | [js-aruco GitHub (Juan Mellado)](https://github.com/jcmellado/js-aruco) | Headers show Copyright 2012 | MIT | Used for pose estimation in [src/main.js](src/main.js) |
@@ -67,7 +69,7 @@ The app does 4 main jobs in a loop:
 Loads the page, adds `<video>` and `<canvas>`, and includes all JavaScript files in order.
 
 - [src/main.js](src/main.js)
-The main controller. It starts the camera, sets up the 3D scene, requests QR decoding, and updates the 3D object every animation frame.
+The main controller. It starts the camera, sets up the 3D scene, requests QR decoding, starts embedded model clips, and updates tracking and animation every frame.
 
 - [src/qrclient.js](src/qrclient.js)
 Creates a Web Worker and sends camera image data to it. This keeps heavy QR processing off the main UI thread.
@@ -105,13 +107,13 @@ Three.js loaders for different model formats. The active loader is selected in [
 Each loop, the current video frame is copied to an offscreen canvas and sent to the worker through `qrclient.js`.
 
 6. Worker decoding
-The worker in `qrworker.js` tries native `BarcodeDetector`. If unavailable/failing, it uses local files in `scripts/jsqrcode`.
+The worker in `qrworker.js` tries native `BarcodeDetector`. If unavailable/failing, it uses local files in `scripts/jsqrcode`. Before returning QR corners, it applies the optional exact-payload filter configured by `tracking.trackMatchingQRCodeData`.
 
 7. Pose estimation
 When a QR code is found, the corner points are sent back. `main.js` passes those points to POSIT (`posit1.js`) to calculate position/rotation.
 
 8. 3D update
-`main.js` moves and rotates the cube and text to match the QR code pose, updates texture data, then renders with Three.js.
+`main.js` advances any embedded model animations, moves and rotates the tracked model and text to match the QR code pose, then renders with Three.js.
 
 ### Why a Web Worker is important
 
@@ -276,6 +278,11 @@ Values below are shown as `main.js default` / `render-config.json value` when th
 - `tracking.poseUpdateIntervalMs` — minimum delay between applied pose updates; `0` applies every decoded frame. Default/value: `0`.
 - `tracking.detectionConfidenceHoldMs` — how long the last good pose is kept across missed decode frames before hiding. `900` / `300`.
 - `tracking.maxCameraSize` — max camera dimension fed into QR decoding before downscaling; lower is faster but less accurate. `800` / `960`.
+- `tracking.trackMatchingQRCodeData` — exact, case-sensitive QR payload to track. An empty string accepts the decoder's normal first result. Default/value: `""`.
+
+### render
+
+- `render.pageTitle` — text displayed in the browser tab or window title bar. Change this string in `render-config.json` to rename the page without editing `index.html`. A missing, non-string, or blank value falls back to `"QR AR 3D"`.
 
 ### render.camera
 
@@ -311,6 +318,7 @@ Not present in `DEFAULT_APP_CONFIG`; only available when `render-config.json` lo
 ### render.cube
 
 - `render.cube.width`, `render.cube.height`, `render.cube.depth` — dimensions of the fallback cube geometry, in scene units. Default/value: `400`, `400`, `400`.
+- The fallback cube is bright red so a missing, invalid, or unsupported model is visually obvious.
 
 ### render.light
 
@@ -426,8 +434,8 @@ A conventional AR.js application supplies a camera source, a tracking context, m
 | Marker detector | The worker tries `BarcodeDetector`, then the bundled `jsqrcode` decoder. |
 | Marker pose | `POS.Posit` from `js-aruco` estimates translation and rotation from four QR corners. |
 | Marker root | The loaded Three.js mesh or group receives the estimated transform directly. |
-| 3D scene and renderer | Three.js revision 86 creates the scene, perspective camera, light, model, and WebGL renderer. |
-| Per-frame update | `requestAnimationFrame()` runs scanning, pose filtering, visibility updates, and rendering. |
+| 3D scene and renderer | Three.js revision 132 creates the scene, perspective camera, light, model, animation mixers, and WebGL renderer. |
+| Per-frame update | `requestAnimationFrame()` advances model animations, runs scanning, pose filtering, visibility updates, and rendering. |
 
 The `arjs.qrPoseBridge.performanceFallback` object in `render-config.json` is retained configuration data, not active behavior. No current JavaScript reads that block. The active performance controls are `tracking.maxCameraSize`, `tracking.scanIntervalMs`, and `tracking.poseUpdateIntervalMs`.
 
@@ -455,9 +463,30 @@ Each stage has a separate responsibility:
 4. **Reconstruct:** `centerCorners()` scales the points back to display coordinates, moves the origin to the middle of the canvas, and flips the image Y direction to match the render coordinate convention.
 5. **Estimate pose:** POSIT uses the four corners, `tracking.qrSizeMillis`, and canvas width to estimate a 3D translation vector and rotation matrix.
 6. **Filter:** rounding, deadzones, maximum-step clamps, and interpolation reduce detection noise before the transform reaches the model.
-7. **Render:** Three.js projects the transformed model through its perspective camera and draws it over the video.
+7. **Animate:** each active `THREE.AnimationMixer` advances its model clips by the elapsed frame time.
+8. **Render:** Three.js projects the transformed model through its perspective camera and draws it over the video.
 
 Detection and rendering run at related but independent rates. `scanIntervalMs` limits new decode requests, while the browser can continue rendering between detections. `poseUpdateIntervalMs` can limit how often a new pose is applied. The hold and fade settings determine what remains visible during brief detection gaps.
+
+### How embedded model animation works
+
+QR tracking and embedded model animation are separate kinds of movement. QR tracking moves an outer group so the whole model follows the marker. An embedded animation changes objects inside that group, such as rotating a wheel, moving a character's bones, or opening a door. Because the two transforms are on different levels, they can operate at the same time:
+
+```text
+Tracked wrapper (QR position, rotation, and scale)
+└── Imported model root (animation mixer root)
+	└── Animated meshes, bones, and other child objects
+```
+
+An `AnimationClip` is not a video. It is a collection of keyframes that says how object properties change over time. An `AnimationMixer` is the Three.js playback controller that reads those clips and applies their current values to the model hierarchy.
+
+For glTF and GLB, `GLTFLoader` returns the visible hierarchy as `gltf.scene` and returns its clips separately as `gltf.animations`. The app creates one mixer rooted at `gltf.scene` and starts every unique clip in that array. For Object/Editor JSON, `ObjectLoader` attaches clips to the relevant objects' `object.animations` arrays. The app traverses the parsed hierarchy and creates a mixer for each animated object. A clip is registered only once for the same root.
+
+The browser passes a timestamp in milliseconds to `requestAnimationFrame()`. The app subtracts the previous timestamp and divides by `1000` to produce elapsed seconds, then passes the same elapsed value to every mixer exactly once. This happens in the existing frame loop and is independent of `scanIntervalMs` and `poseUpdateIntervalMs`; no second render loop is created.
+
+Playback starts once the model loads and continues while the frame loop runs, even when the model is hidden because its QR code is temporarily lost. Finding the QR code again reveals the animation at its current playback time instead of restarting it. All clips play simultaneously with Three.js's default repeating loop behavior. If several clips animate the same property, Three.js blends their actions and the result depends on how the asset was authored.
+
+A model with no clips does not get a mixer. Static glTF/GLB and Object JSON models therefore continue through their existing render path with only the negligible cost of checking an empty mixer list. STL and the bright-red fallback cube cannot contain animation and remain static. Legacy geometry JSON still uses the older single-mesh loader path, so animation playback for that format is not guaranteed. The application always renders through its own AR perspective camera; a camera embedded in a model does not replace it.
 
 ## Three.js basics used by this app
 
@@ -539,7 +568,7 @@ rendered scale = base scale * dynamic QR-size multiplier
 
 ### Visibility and the render loop
 
-`requestAnimationFrame()` asks the browser to run the next visual update before repaint. On each frame the app decides whether it can start a decode, updates visibility and pose state, and calls `renderer.render(scene, camera)`.
+`requestAnimationFrame()` asks the browser to run the next visual update before repaint. On each frame the app calculates animation elapsed time once, updates every active mixer, decides whether it can start a decode, updates visibility and pose state, and calls `renderer.render(scene, camera)`.
 
 Visibility is applied by traversing every material below the tracked root, enabling transparency, and multiplying its original opacity by a shared alpha. This works for multi-part scenes as well as a single mesh. Complex transparent models can expose normal WebGL transparency-sorting artifacts during a fade; disabling fades is the simplest diagnostic.
 
@@ -557,7 +586,7 @@ The file extension in `render.model.path` selects the loader. Supported extensio
 | Materials | Preserved | App creates Phong material | Preserved if embedded; otherwise app creates Phong material | Preserved |
 | Textures | Supported by the imported scene | Not supported by STL | Possible when referenced by embedded materials | Possible when referenced by objects/materials |
 | Embedded lights | Detected and used | None | Not represented by this geometry path | Detected and used |
-| Animation playback | Not started by this app | Not available | Not started by this app | Not started by this app |
+| Animation playback | All `gltf.animations` clips auto-play together | Not available; remains static | Not guaranteed by the current legacy mesh path | Attached `object.animations` clips auto-play |
 | Axis normalization | `.gltf`: `-PI/2` on X; `.glb`: `+PI/2` on X | None | None | None |
 | Live pitch sign | `.gltf`: normal; `.glb`: inverted to match marker motion | Normal | Normal | Normal |
 | Placement modes | Full support | Z-face anchor only; authored X/Y origin remains | Geometry is centered | Full support |
@@ -575,10 +604,11 @@ Current behavior:
 4. Bounds are computed after that optional axis conversion.
 5. The configured placement mode adjusts the pose root.
 6. Embedded lights are counted. If at least one exists, the app does not add its default point light.
+7. Every clip in `gltf.animations` starts on one mixer rooted at `gltf.scene`.
 
 GLB also receives a `-1` live pitch multiplier. Static orientation and tracked pitch direction are separate controls: the quarter-turn establishes how the imported model rests on the marker, while the pitch multiplier makes up/down motion follow the marker instead of moving in reverse.
 
-Although animation clips may load, the application never creates a `THREE.AnimationMixer` and never advances an animation clock. Animated glTF/GLB files therefore render as a static scene. The app also always renders through its own perspective camera; a camera included in the asset does not replace the AR camera.
+All valid glTF/GLB clips start automatically after loading and play simultaneously with Three.js's default looping behavior. Their mixer advances once per browser frame, even while QR tracking is temporarily lost or the model is hidden. Reacquiring the QR reveals the current animation state rather than restarting the clips. The app always renders through its own perspective camera; a camera included in the asset does not replace the AR camera.
 
 For `.gltf`, keep all referenced `.bin` and texture files at the relative paths recorded in the glTF document. Live Server must be able to serve every dependency. GLB is often easier to move because its dependencies can be embedded, but embedding is an exporter option rather than an absolute guarantee.
 
@@ -627,8 +657,9 @@ Current Object JSON behavior is intentionally aligned with glTF behavior:
 3. The result goes through bounds-based placement without automatic axis rotation.
 4. Embedded lights are detected and suppress the default point light.
 5. The app's AR camera remains the renderer camera, regardless of cameras in the JSON scene.
+6. Every clip attached to an object's `object.animations` array starts on a mixer rooted at that object.
 
-As with glTF, merely including animation data does not play it. An animation mixer and per-frame update would need to be added.
+Object/Editor JSON animation playback depends on `THREE.ObjectLoader` parsing the file's animation records and attaching them to objects. Multiple animated objects can each receive their own mixer, and duplicate clip references on the same object are ignored. This support does not extend to the separate legacy geometry JSON loader.
 
 ### JSON auto-detection details
 
@@ -707,7 +738,11 @@ For `.gltf` and Object JSON, inspect network requests for missing images and ver
 
 ### An animated model does not move
 
-Loading animation data and playing it are separate tasks. This app does not create an animation mixer or update animation clips, so supported scene formats display statically. Tracking animation (the whole model following the QR code) still works because that is a transform applied by the app, not an animation embedded in the asset.
+First confirm that the asset actually contains exported animation clips. For glTF/GLB, the clips must appear in `gltf.animations`; placing data only on `gltf.scene.animations` is not the loader's normal contract. For Object/Editor JSON, `THREE.ObjectLoader` must attach clips to an object's `object.animations` array. STL, the fallback cube, and ordinary legacy geometry JSON do not have guaranteed animation playback.
+
+When clips start, the console reports `Started model animation clips:` followed by a count. If that message is absent, check the export settings and model format. If it appears but nothing moves, inspect the console for `THREE.PropertyBinding` or animation-binding warnings; they usually mean a clip targets a node name that is missing or changed during export. All clips play together, so clips that control the same property may also blend or compete. Material-opacity tracks can be overwritten by this app's visibility fade because QR visibility remains authoritative.
+
+Animation speed does not depend on QR scanning or pose-update settings. Temporarily losing the QR hides or fades the tracked wrapper but does not stop or restart its mixer; reacquiring the QR should show the animation at a later point in its loop.
 
 ### Tracking looks shaky or delayed
 
@@ -722,7 +757,8 @@ This application provides QR detection, approximate six-degree pose estimation, 
 - WebXR world tracking, plane detection, anchors, or depth sensing.
 - Real-world occlusion or environmental lighting estimation.
 - Camera-intrinsic calibration matched to each physical device.
-- Automatic playback of model animations.
+- Guaranteed animation playback for legacy geometry JSON, STL, or the fallback cube.
+- User controls for selecting, pausing, weighting, or changing the speed of individual clips.
 - Selection of different models based on decoded QR content.
 
 Those boundaries do not prevent the current QR overlay from working; they define why it remains a compact, understandable example. The core idea is direct: detect four QR corners, estimate a pose, filter it, apply it to a Three.js object, and render that object over the camera feed.

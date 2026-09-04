@@ -5,9 +5,11 @@
     "scanIntervalMs": 0, // Minimum delay between decode attempts; 0 means attempt every frame.
     "poseUpdateIntervalMs": 0, // Minimum delay between visible pose updates; 0 means apply every decoded frame.
     "detectionConfidenceHoldMs": 300, // Keep last good pose this long across missed decode frames before hiding.
-    "maxCameraSize": 960 // Max camera dimension used for QR decode input before downscaling for performance.
+    "maxCameraSize": 960, // Max camera dimension used for QR decode input before downscaling for performance.
+    "trackMatchingQRCodeData": "" // Exact QR data to track; empty string keeps the standard first-detected QR behavior.
   },
   "render": {
+    "pageTitle": "QR AR 3D", // Text displayed in the browser tab or window title bar.
     "camera": {
       "fov": 75, // Perspective camera field of view.
       "near": 1, // Near clipping plane.

@@ -495,7 +495,8 @@ function createFallbackTrackedMesh() {
   );
   // MeshPhongMaterial reacts to scene lights and can show shiny highlights.
   var fallbackMaterial = new THREE.MeshPhongMaterial({
-    color: APP_CONFIG.render.model.material.color,
+    // Bright red makes a load failure visually distinct from a real model.
+    color: 0xff0000,
     specular: APP_CONFIG.render.model.material.specular,
     shininess: APP_CONFIG.render.model.material.shininess,
     // DoubleSide draws both the inward-facing and outward-facing side of faces.

@@ -21,6 +21,16 @@ const AR_QR_CODE_TEMPLATE_BASE_PATH = '../editor/files/ARQRCodeExportFiles/';
 const AR_QR_CODE_CONFIG_PATH = 'src/config/render-config.json';
 const AR_QR_CODE_MODEL_PATH = 'models/model.glb';
 const AR_QR_CODE_MODEL_PATH_PATTERN = /("model"\s*:\s*\{[\s\S]*?"path"\s*:\s*)"[^"]*"/;
+// Match pageTitle directly because the template contains comments and is not strict JSON.
+// RegExp breakdown:
+// - /.../ marks the beginning and end of the regular expression.
+// - ("pageTitle"\s*:\s*) captures the key, colon, and optional whitespace as group 1.
+// - " and " match the opening and closing quotation marks around the current value.
+// - (?:...) groups alternatives without creating another captured result.
+// - \\. matches a backslash followed by an escaped character, such as \" or \\.
+// - [^"\\] matches one ordinary character that is neither a quote nor a backslash.
+// - * repeats those escaped or ordinary characters until the closing quote is reached.
+const AR_QR_CODE_PAGE_TITLE_PATTERN = /("pageTitle"\s*:\s*)"(?:\\.|[^"\\])*"/;
 
 const AR_QR_CODE_EXPORT_FILES = [
 	'Readme.md',
@@ -69,6 +79,25 @@ function injectARQRCodeModelPath(configContent) {
 	return configContent.replace(AR_QR_CODE_MODEL_PATH_PATTERN, function (match, prefix) {
 
 		return prefix + JSON.stringify(AR_QR_CODE_MODEL_PATH);
+
+	});
+
+}
+
+function injectARQRCodePageTitle(configContent, pageTitle) {
+
+	// Fail clearly if a future template change removes or renames the expected setting.
+	if (!AR_QR_CODE_PAGE_TITLE_PATTERN.test(configContent)) {
+
+		throw new Error('The QR tracker page title was not found in ' + AR_QR_CODE_CONFIG_PATH + '.');
+
+	}
+
+	return configContent.replace(AR_QR_CODE_PAGE_TITLE_PATTERN, function (match, prefix) {
+
+		// prefix is captured group 1 (for example, `"pageTitle": `). The old value in
+		// match is discarded, and JSON.stringify adds a safely escaped replacement value.
+		return prefix + JSON.stringify(pageTitle);
 
 	});
 
@@ -1746,6 +1775,7 @@ option.onClick(async function () {
 
 	try {
 
+		// Reuse one title for both the browser tab and the downloaded ZIP filename.
 		const appTitle = config.getKey('project/title') || 'AR QR Code Tracker App';
 		const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
 		const scene = createSceneCloneWithoutNamedObjects(editor.scene, [DEFAULT_MARKER_PLANE_NAME]);
@@ -1755,7 +1785,12 @@ option.onClick(async function () {
 			exporter.parseAsync(scene, { binary: true, animations: animations }),
 			fetchARQRCodeTemplateFile(AR_QR_CODE_CONFIG_PATH)
 		]);
-		const renderConfig = injectARQRCodeModelPath(await configResponse.text());
+		// Calls run from the inside out: first replace the model path, then replace pageTitle.
+		const renderConfig = injectARQRCodePageTitle(
+			injectARQRCodeModelPath(await configResponse.text()),
+			appTitle
+		);
+		// Adding renderConfig at the template's config path replaces that file in the ZIP.
 		const content = await createARQRCodeTrackerZip({
 			[AR_QR_CODE_CONFIG_PATH]: renderConfig,
 			[AR_QR_CODE_MODEL_PATH]: model

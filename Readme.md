@@ -4,7 +4,7 @@ Augmented Reality QR code tracker
 
 This Augmented Reality application tracks QR codes and places 3D models on it. The application acocmplishes this by identifying the QR code displayed on a camera, measuring the scale, position, and distortion of hte QR Code, then sending their information to ThreeJS to place the model. Multiple model formats are supported: STL (binary/ASCII), glTF 2.0 (`.gltf` / `.glb`), and legacy Three.js JSON format.
 
-The tracking application does not differnetniate between QR Codes, although this could be accomplished by reading the QR Code data and preforming a boolean check to match pre-suplied data prior to rendering the model.
+The tracker can optionally target one QR code by requiring an exact, case-sensitive payload match. Leave `tracking.trackMatchingQRCodeData` empty to preserve the original behavior of accepting the first decoded QR code.
 
 This is based off the ar3d github project found at https://github.com/jeromeetienne/ar3d
 
@@ -17,6 +17,8 @@ which could be previewed at: [https://ar3d.surge.sh](https://ar3d.surge.sh)
 This app first tries the native [Shape Detection API](https://wicg.github.io/shape-detection-api/#barcode-detection-api) (`BarcodeDetector`) to detect and anlize the QR Code.
 
 If `BarcodeDetector` is unavailable in the browser, or it fails to run, the app automatically falls back to the local QR decoder library under [scripts/jsqrcode](scripts/jsqrcode).
+
+Set `tracking.trackMatchingQRCodeData` in [src/config/render-config.json](src/config/render-config.json) to the exact text encoded in the QR code that should control the model. The native `BarcodeDetector` path checks every QR result in a frame for that match. The bundled software fallback can decode at most one candidate per frame, so it accepts that candidate only when its payload matches.
 
 Unlike the original ar3d project, this app does not need experimental browser flags for the fallback path.
 
@@ -105,7 +107,7 @@ Three.js loaders for different model formats. The active loader is selected in [
 Each loop, the current video frame is copied to an offscreen canvas and sent to the worker through `qrclient.js`.
 
 6. Worker decoding
-The worker in `qrworker.js` tries native `BarcodeDetector`. If unavailable/failing, it uses local files in `scripts/jsqrcode`.
+The worker in `qrworker.js` tries native `BarcodeDetector`. If unavailable/failing, it uses local files in `scripts/jsqrcode`. Before returning QR corners, it applies the optional exact-payload filter configured by `tracking.trackMatchingQRCodeData`.
 
 7. Pose estimation
 When a QR code is found, the corner points are sent back. `main.js` passes those points to POSIT (`posit1.js`) to calculate position/rotation.
@@ -276,6 +278,7 @@ Values below are shown as `main.js default` / `render-config.json value` when th
 - `tracking.poseUpdateIntervalMs` — minimum delay between applied pose updates; `0` applies every decoded frame. Default/value: `0`.
 - `tracking.detectionConfidenceHoldMs` — how long the last good pose is kept across missed decode frames before hiding. `900` / `300`.
 - `tracking.maxCameraSize` — max camera dimension fed into QR decoding before downscaling; lower is faster but less accurate. `800` / `960`.
+- `tracking.trackMatchingQRCodeData` — exact, case-sensitive QR payload to track. An empty string accepts the decoder's normal first result. Default/value: `""`.
 
 ### render.camera
 
@@ -311,6 +314,7 @@ Not present in `DEFAULT_APP_CONFIG`; only available when `render-config.json` lo
 ### render.cube
 
 - `render.cube.width`, `render.cube.height`, `render.cube.depth` — dimensions of the fallback cube geometry, in scene units. Default/value: `400`, `400`, `400`.
+- The fallback cube is bright red so a missing, invalid, or unsupported model is visually obvious.
 
 ### render.light
 

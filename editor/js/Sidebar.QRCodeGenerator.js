@@ -3,6 +3,7 @@
 import {
 	UISpan, UIRow, UIText, UIInput, UISelect, UICheckbox, UIColor, UINumber, UIButton, UIHorizontalRule
 } from './libs/ui.js';
+import QRCode from '../../src/esmodqrcodegenerator.js';
 import {
 	QR_CODE_RENDER_SETTING_GROUPS,
 	getQRCodeSettingConfigKey,
@@ -211,6 +212,128 @@ function SidebarQRCodeGenerator( editor ) {
 	header.setMarginBottom( '12px' );
 	content.add( header );
 
+	const generatedOutput = new UISpan();
+	generatedOutput.setDisplay( 'none' );
+	generatedOutput.setWidth( '100%' );
+	generatedOutput.setMarginBottom( '8px' );
+
+	const qrCodePreview = new UISpan();
+	qrCodePreview.setDisplay( 'block' );
+	qrCodePreview.dom.style.width = 'fit-content';
+	qrCodePreview.dom.style.margin = '0 auto';
+	qrCodePreview.dom.style.background = '#fff';
+	qrCodePreview.dom.style.boxSizing = 'border-box';
+	qrCodePreview.dom.setAttribute( 'aria-label', 'Generated QR Code' );
+	generatedOutput.add( qrCodePreview );
+	content.add( generatedOutput );
+
+	const generatorInputLabel = new UIText( 'QR Code Content' );
+	generatorInputLabel.setDisplay( 'block' );
+	generatorInputLabel.setMarginBottom( '6px' );
+	content.add( generatorInputLabel );
+
+	const generatorInput = new UIInput( '' );
+	generatorInput.setWidth( '100%' );
+	generatorInput.setMarginBottom( '8px' );
+	generatorInput.dom.placeholder = 'Enter text';
+	generatorInput.dom.setAttribute( 'aria-label', 'Text to encode in the QR Code' );
+	generatorInput.dom.style.boxSizing = 'border-box';
+	content.add( generatorInput );
+
+	let generatedCanvas;
+	let generatedQuietZone = 0;
+
+	const saveQRCodeButton = new UIButton( 'Save QR Code' );
+	saveQRCodeButton.setWidth( '100%' );
+	saveQRCodeButton.setDisplay( 'none' );
+	saveQRCodeButton.setMarginBottom( '12px' );
+	saveQRCodeButton.onClick( () => {
+
+		if ( generatedCanvas === undefined ) return;
+
+		const downloadCanvas = document.createElement( 'canvas' );
+		downloadCanvas.width = generatedCanvas.width + generatedQuietZone * 2;
+		downloadCanvas.height = generatedCanvas.height + generatedQuietZone * 2;
+
+		const context = downloadCanvas.getContext( '2d' );
+		context.fillStyle = '#fff';
+		context.fillRect( 0, 0, downloadCanvas.width, downloadCanvas.height );
+		context.drawImage( generatedCanvas, generatedQuietZone, generatedQuietZone );
+
+		const link = document.createElement( 'a' );
+		link.href = downloadCanvas.toDataURL( 'image/png' );
+		link.download = 'qrcode.png';
+		document.body.appendChild( link );
+		link.click();
+		link.remove();
+
+	} );
+
+	const generateQRCodeButton = new UIButton( 'Generate QR Code' );
+	generateQRCodeButton.setWidth( '100%' );
+	generateQRCodeButton.setMarginBottom( '8px' );
+
+	function generateQRCode() {
+
+		const text = generatorInput.getValue();
+		generatorInput.dom.setCustomValidity( '' );
+
+		if ( text.trim() === '' ) {
+
+			generatorInput.dom.setCustomValidity( 'Enter text to generate a QR Code.' );
+			generatorInput.dom.reportValidity();
+			return;
+
+		}
+
+		qrCodePreview.clear();
+
+		try {
+
+			const qrCode = new QRCode( qrCodePreview.dom, {
+				text,
+				width: 192,
+				height: 192,
+				colorDark: '#000000',
+				colorLight: '#ffffff',
+				correctLevel: QRCode.CorrectLevel.H
+			} );
+
+			generatedCanvas = qrCodePreview.dom.querySelector( 'canvas' );
+			generatedQuietZone = Math.ceil( 192 / qrCode._oQRCode.getModuleCount() * 4 );
+			qrCodePreview.dom.style.padding = `${generatedQuietZone}px`;
+			generatedOutput.setDisplay( 'block' );
+			saveQRCodeButton.setDisplay( '' );
+
+		} catch ( error ) {
+
+			generatedCanvas = undefined;
+			generatedOutput.setDisplay( 'none' );
+			saveQRCodeButton.setDisplay( 'none' );
+			generatorInput.dom.setCustomValidity( error instanceof Error ? error.message : 'Unable to generate QR Code.' );
+			generatorInput.dom.reportValidity();
+
+		}
+
+	}
+
+	generateQRCodeButton.onClick( generateQRCode );
+	generatorInput.onInput( () => generatorInput.dom.setCustomValidity( '' ) );
+	generatorInput.onKeyDown( ( event ) => {
+
+		if ( event.key === 'Enter' ) {
+
+			event.preventDefault();
+			generateQRCode();
+
+		}
+
+	} );
+	content.add( generateQRCodeButton );
+	content.add( saveQRCodeButton );
+
+	content.add( new UIHorizontalRule().setMarginBottom( '12px' ) );
+
 	// UIRow groups the label and checkbox horizontally. The fixed label width
 	// keeps this control aligned with other sidebar controls.
 	const trackingRow = new UIRow();
@@ -344,6 +467,14 @@ function SidebarQRCodeGenerator( editor ) {
 	trackingCheckbox.onChange( function () {
 
 		trackSpecificQRCode = this.getValue();
+
+		if ( trackSpecificQRCode && generatedCanvas !== undefined ) {
+
+			qrCodeInfo = generatorInput.getValue();
+			qrCodeInfoInput.setValue( qrCodeInfo );
+
+		}
+
 		qrCodeInfoSection.setDisplay( trackSpecificQRCode ? 'block' : 'none' );
 
 	} );

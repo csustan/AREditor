@@ -115,6 +115,110 @@ function SidebarNFTMarkerGenerator(editor) {
 
 	container.add( content );
 
+	function makeInfoButton( infoText ) {
+
+		const wrapper = document.createElement( 'span' );
+		wrapper.style.position = 'relative';
+		wrapper.style.display = 'inline-flex';
+		wrapper.style.alignItems = 'center';
+
+		const button = document.createElement( 'button' );
+		button.type = 'button';
+		button.textContent = 'i';
+		button.setAttribute( 'aria-label', `Information: ${infoText}` );
+		button.style.width = '16px';
+		button.style.height = '16px';
+		button.style.padding = '0';
+		button.style.border = '1px solid currentColor';
+		button.style.borderRadius = '50%';
+		button.style.background = 'transparent';
+		button.style.color = 'inherit';
+		button.style.font = 'bold 12px/14px sans-serif';
+		button.style.cursor = 'help';
+		button.setAttribute( 'aria-pressed', 'false' );
+
+		const tooltip = document.createElement( 'span' );
+		tooltip.textContent = infoText;
+		tooltip.style.display = 'none';
+		tooltip.style.position = 'fixed';
+		tooltip.style.width = '220px';
+		tooltip.style.maxWidth = 'calc(100vw - 16px)';
+		tooltip.style.boxSizing = 'border-box';
+		tooltip.style.padding = '7px 9px';
+		tooltip.style.background = '#fff';
+		tooltip.style.color = '#444';
+		tooltip.style.border = '1px solid #aaa';
+		tooltip.style.borderRadius = '3px';
+		tooltip.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+		tooltip.style.font = '12px/1.35 sans-serif';
+		tooltip.style.whiteSpace = 'normal';
+		tooltip.style.textAlign = 'left';
+		tooltip.style.zIndex = '2147483647';
+		tooltip.style.pointerEvents = 'none';
+
+		let pinned = false;
+		const positionTooltip = () => {
+
+			const buttonRect = button.getBoundingClientRect();
+			const tooltipRect = tooltip.getBoundingClientRect();
+			const viewportPadding = 8;
+			const gap = 5;
+			const maxLeft = Math.max( viewportPadding, window.innerWidth - tooltipRect.width - viewportPadding );
+			const left = Math.min( maxLeft, Math.max( viewportPadding, buttonRect.right - tooltipRect.width ) );
+			let top = buttonRect.bottom + gap;
+
+			if ( top + tooltipRect.height > window.innerHeight - viewportPadding ) {
+
+				top = buttonRect.top - tooltipRect.height - gap;
+
+			}
+
+			tooltip.style.left = `${left}px`;
+			tooltip.style.top = `${Math.max( viewportPadding, top )}px`;
+
+		};
+		const showTooltip = () => {
+
+			if ( !tooltip.isConnected ) document.body.appendChild( tooltip );
+			tooltip.style.display = 'block';
+			positionTooltip();
+			window.addEventListener( 'resize', positionTooltip );
+			window.addEventListener( 'scroll', positionTooltip, true );
+
+		};
+		const removeTooltip = () => {
+
+			tooltip.remove();
+			window.removeEventListener( 'resize', positionTooltip );
+			window.removeEventListener( 'scroll', positionTooltip, true );
+
+		};
+		const hideTooltip = () => {
+
+			if ( !pinned ) removeTooltip();
+
+		};
+
+		button.addEventListener( 'mouseenter', showTooltip );
+		button.addEventListener( 'mouseleave', hideTooltip );
+		button.addEventListener( 'focus', showTooltip );
+		button.addEventListener( 'blur', hideTooltip );
+		button.addEventListener( 'click', ( event ) => {
+
+			event.stopPropagation();
+			pinned = !pinned;
+			button.setAttribute( 'aria-pressed', String( pinned ) );
+			button.style.filter = pinned ? 'invert(1)' : 'none';
+			if ( pinned ) showTooltip();
+			else removeTooltip();
+
+		} );
+
+		wrapper.appendChild( button );
+		return wrapper;
+
+	}
+
 	// Title -----------------------------------------------------
 
 	const header = new UIText( 'NFT Marker Generator' );
@@ -360,6 +464,9 @@ function SidebarNFTMarkerGenerator(editor) {
 	const fileNameInput = new UIInput().setWidth('140px');
 	fileNameInput.setValue('generatedMarker');
 	settingsRow1.add(new UIText('Filename').setWidth('90px'));
+	settingsRow1.dom.appendChild( makeInfoButton(
+		'Base name for the generated NFT dataset files. File extensions are added automatically.'
+	) );
 	settingsRow1.add(fileNameInput);
 
 	const zftCheckbox = document.createElement('input');
@@ -373,8 +480,14 @@ function SidebarNFTMarkerGenerator(editor) {
 
 	const zftWrap = document.createElement('span');
 	zftWrap.style.marginLeft = '12px';
+	zftWrap.style.display = 'inline-flex';
+	zftWrap.style.alignItems = 'center';
+	zftWrap.style.gap = '6px';
 	zftWrap.appendChild(zftCheckbox);
 	zftWrap.appendChild(zftLabel);
+	zftWrap.appendChild( makeInfoButton(
+		'Also generates the optional .zft companion file alongside the standard NFT marker dataset.'
+	) );
 
 	// Helper to create numeric input blocks consistently
 	function addNumberSetting(row, labelText, defaultValue, widthPx) {
@@ -401,15 +514,20 @@ function SidebarNFTMarkerGenerator(editor) {
 
 
 	// start addNumberSettingRow function: each numeric setting on its own line (prevents sidebar warping)
-	function addNumberSettingRow( labelText, defaultValue, widthPx ) {
+	function addNumberSettingRow( labelText, defaultValue, widthPx, infoText ) {
 
 		const row = new UIRow();
 		row.setMarginBottom('8px');
+		row.dom.style.display = 'flex';
+		row.dom.style.flexWrap = 'wrap';
+		row.dom.style.alignItems = 'center';
+		row.dom.style.gap = '6px';
 
 		const input = new UIInput().setWidth( widthPx || '120px' );
 		input.setValue( String( defaultValue ) );
 
 		row.add( new UIText( labelText ).setWidth( '110px' ) );
+		row.dom.appendChild( makeInfoButton( infoText ) );
 		row.add( input );
 
 		content.add( row );
@@ -419,13 +537,34 @@ function SidebarNFTMarkerGenerator(editor) {
 	// end addNumberSettingRow functions
 
 
-	const dpiInput = addNumberSettingRow('dpi', 72, '120px');
-	const levelInput = addNumberSettingRow('level', 2, '120px');
-	const leveliInput = addNumberSettingRow('leveli', 1, '120px');
-	const sdThreshInput = addNumberSettingRow('sd_thresh', 8, '120px');
-	const maxThreshInput = addNumberSettingRow('max_thresh', 0.9, '120px');
-	const minThreshInput = addNumberSettingRow('min_thresh', 0.55, '120px');
-	const featureDensityInput = addNumberSettingRow('feature_density', 70, '120px');
+	const dpiInput = addNumberSettingRow(
+		'dpi', 72, '120px',
+		'Source image resolution in dots per inch. This determines the marker\'s real-world scale during tracking.'
+	);
+	const levelInput = addNumberSettingRow(
+		'level', 2, '120px',
+		'Tracking-feature extraction level. Higher values select more features for ongoing marker tracking.'
+	);
+	const leveliInput = addNumberSettingRow(
+		'leveli', 1, '120px',
+		'Initialization-feature extraction level. Higher values select more features for initially finding the marker.'
+	);
+	const sdThreshInput = addNumberSettingRow(
+		'sd_thresh', 8, '120px',
+		'Minimum local image variation required for feature candidates. Higher values reject more low-detail areas.'
+	);
+	const maxThreshInput = addNumberSettingRow(
+		'max_thresh', 0.9, '120px',
+		'Upper similarity threshold used during feature selection. Keep this value above min_thresh.'
+	);
+	const minThreshInput = addNumberSettingRow(
+		'min_thresh', 0.55, '120px',
+		'Lower similarity threshold used during feature selection. Keep this value below max_thresh.'
+	);
+	const featureDensityInput = addNumberSettingRow(
+		'feature_density', 70, '120px',
+		'Target density of extracted feature points. Higher values retain more points and may increase generation time and dataset size.'
+	);
 	// end insert
 
 

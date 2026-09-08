@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { zipSync, strToU8, ZipPassThrough } from 'three/addons/libs/fflate.module.js';// use Uint8Array(content); for the binary camera_para.dat file
 import { AddObjectCommand } from './commands/AddObjectCommand.js'; //needed for creating the objects in the default template
+import { getTrackedQRCodeData } from './Sidebar.QRCodeGenerator.js';
 //For now, import on the index.html
 ////import * as JSZip from './libs/jszip.js' //'../examples/jsm/libs/jszip.js'; // replacing fflate.module.js with JSZip since fflate doesn't support binary files, like the camera_para.dat
 //import JSZip from './libs/jszip.js' ; 
@@ -21,6 +22,7 @@ const AR_QR_CODE_TEMPLATE_BASE_PATH = '../editor/files/ARQRCodeExportFiles/';
 const AR_QR_CODE_CONFIG_PATH = 'src/config/render-config.json';
 const AR_QR_CODE_MODEL_PATH = 'models/model.glb';
 const AR_QR_CODE_MODEL_PATH_PATTERN = /("model"\s*:\s*\{[\s\S]*?"path"\s*:\s*)"[^"]*"/;
+const AR_QR_CODE_TRACKING_DATA_PATTERN = /("trackMatchingQRCodeData"\s*:\s*)"(?:\\.|[^"\\])*"/;
 // Match pageTitle directly because the template contains comments and is not strict JSON.
 // RegExp breakdown:
 // - /.../ marks the beginning and end of the regular expression.
@@ -98,6 +100,23 @@ function injectARQRCodePageTitle(configContent, pageTitle) {
 		// prefix is captured group 1 (for example, `"pageTitle": `). The old value in
 		// match is discarded, and JSON.stringify adds a safely escaped replacement value.
 		return prefix + JSON.stringify(pageTitle);
+
+	});
+
+}
+
+function injectARQRCodeTrackingData(configContent, qrCodeData) {
+
+	if (!AR_QR_CODE_TRACKING_DATA_PATTERN.test(configContent)) {
+
+		throw new Error('The QR tracker matching data setting was not found in ' + AR_QR_CODE_CONFIG_PATH + '.');
+
+	}
+
+	return configContent.replace(AR_QR_CODE_TRACKING_DATA_PATTERN, function (match, prefix) {
+
+		// JSON.stringify preserves QR payloads containing quotes, backslashes, or line breaks.
+		return prefix + JSON.stringify(qrCodeData);
 
 	});
 
@@ -1785,11 +1804,12 @@ option.onClick(async function () {
 			exporter.parseAsync(scene, { binary: true, animations: animations }),
 			fetchARQRCodeTemplateFile(AR_QR_CODE_CONFIG_PATH)
 		]);
-		// Calls run from the inside out: first replace the model path, then replace pageTitle.
-		const renderConfig = injectARQRCodePageTitle(
-			injectARQRCodeModelPath(await configResponse.text()),
-			appTitle
-		);
+		// Build the exported config without changing the template file stored in the editor.
+		let renderConfig = await configResponse.text();
+		renderConfig = injectARQRCodeModelPath(renderConfig);
+		renderConfig = injectARQRCodePageTitle(renderConfig, appTitle);
+		// The sidebar getter returns an empty string when specific-code tracking is unchecked.
+		renderConfig = injectARQRCodeTrackingData(renderConfig, getTrackedQRCodeData());
 		// Adding renderConfig at the template's config path replaces that file in the ZIP.
 		const content = await createARQRCodeTrackerZip({
 			[AR_QR_CODE_CONFIG_PATH]: renderConfig,

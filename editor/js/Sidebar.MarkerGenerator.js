@@ -227,6 +227,7 @@ function SidebarMarkerGenerator(editor) {
     button.style.color = 'inherit';
     button.style.font = 'bold 12px/14px sans-serif';
     button.style.cursor = 'help';
+    button.setAttribute('aria-pressed', 'false');
 
     const tooltip = document.createElement('span');
     tooltip.textContent = infoText;
@@ -287,6 +288,8 @@ function SidebarMarkerGenerator(editor) {
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       pinned = !pinned;
+      button.setAttribute('aria-pressed', String(pinned));
+      button.style.filter = pinned ? 'invert(1)' : 'none';
       if (pinned) showTooltip();
       else removeTooltip();
     });
@@ -439,11 +442,21 @@ function SidebarMarkerGenerator(editor) {
   content.add(makeSectionTitle('Marker Image Settings'));
 
   const patternRatio = new UINumber(0.5).setRange(0.1, 0.9).setStep(0.01).onChange(updateFullMarkerImage);
-  makeSettingRow('Pattern Ratio', patternRatio);
+  makeSettingRow(
+    'Pattern Ratio',
+    patternRatio,
+    '110px',
+    'Size of the inner image relative to the full marker. Higher values make the image larger and the border thinner.'
+  );
   window._markerPatternRatio = patternRatio;
 
   const imageSize = new UINumber(512).setRange(150, 2500).setStep(10).onChange(updateFullMarkerImage);
-  makeSettingRow('Image Size (px)', imageSize);
+  makeSettingRow(
+    'Image Size (px)',
+    imageSize,
+    '110px',
+    'Width and height of the generated square marker image in pixels. Higher values produce a higher-resolution image.'
+  );
   window._markerImageSize = imageSize;
 
   const colorDropdown = new UIInput().setValue(selectedColor).onChange(() => {

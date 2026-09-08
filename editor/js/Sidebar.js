@@ -28,7 +28,7 @@ function Sidebar( editor ) {
 
 	const markerGenerator = new SidebarMarkerGenerator(editor); //Declare the marker generator before calling it
 	const nftGenerator = new SidebarNFTMarkerGenerator(editor); //Declare the Natural Feature Marker Generator before calling it
-	const qrCodeGenerator = new SidebarQRCodeGenerator();
+	const qrCodeGenerator = new SidebarQRCodeGenerator(editor);
 
 	container.addTab( 'scene', strings.getKey( 'sidebar/scene' ), scene );
 	container.addTab( 'project', strings.getKey( 'sidebar/project' ), project );

@@ -3,6 +3,9 @@ import * as THREE from 'three';
 import { zipSync, strToU8, ZipPassThrough } from 'three/addons/libs/fflate.module.js';// use Uint8Array(content); for the binary camera_para.dat file
 import { AddObjectCommand } from './commands/AddObjectCommand.js'; //needed for creating the objects in the default template
 import { getTrackedQRCodeData } from './Sidebar.QRCodeGenerator.js';
+// These helpers connect the QR sidebar to publishing. The first builds the final
+// render-config.json text, and the second reads the settings currently shown in the sidebar.
+import { createQRCodeRenderConfig, getQRCodeRenderSettingValues } from './QRCodeRenderSettings.js';
 //For now, import on the index.html
 ////import * as JSZip from './libs/jszip.js' //'../examples/jsm/libs/jszip.js'; // replacing fflate.module.js with JSZip since fflate doesn't support binary files, like the camera_para.dat
 //import JSZip from './libs/jszip.js' ; 
@@ -21,18 +24,6 @@ const AR_MARKER_APP_EXPORT_SETTINGS_BLOCK = /\/\/ __AR_MARKER_APP_EXPORT_SETTING
 const AR_QR_CODE_TEMPLATE_BASE_PATH = '../editor/files/ARQRCodeExportFiles/';
 const AR_QR_CODE_CONFIG_PATH = 'src/config/render-config.json';
 const AR_QR_CODE_MODEL_PATH = 'models/model.glb';
-const AR_QR_CODE_MODEL_PATH_PATTERN = /("model"\s*:\s*\{[\s\S]*?"path"\s*:\s*)"[^"]*"/;
-const AR_QR_CODE_TRACKING_DATA_PATTERN = /("trackMatchingQRCodeData"\s*:\s*)"(?:\\.|[^"\\])*"/;
-// Match pageTitle directly because the template contains comments and is not strict JSON.
-// RegExp breakdown:
-// - /.../ marks the beginning and end of the regular expression.
-// - ("pageTitle"\s*:\s*) captures the key, colon, and optional whitespace as group 1.
-// - " and " match the opening and closing quotation marks around the current value.
-// - (?:...) groups alternatives without creating another captured result.
-// - \\. matches a backslash followed by an escaped character, such as \" or \\.
-// - [^"\\] matches one ordinary character that is neither a quote nor a backslash.
-// - * repeats those escaped or ordinary characters until the closing quote is reached.
-const AR_QR_CODE_PAGE_TITLE_PATTERN = /("pageTitle"\s*:\s*)"(?:\\.|[^"\\])*"/;
 
 const AR_QR_CODE_EXPORT_FILES = [
 	'Readme.md',
@@ -69,58 +60,6 @@ const AR_QR_CODE_EXPORT_FILES = [
 	'src/main.js',
 	'src/qrclient.js'
 ];
-
-function injectARQRCodeModelPath(configContent) {
-
-	if (!AR_QR_CODE_MODEL_PATH_PATTERN.test(configContent)) {
-
-		throw new Error('The QR tracker model path was not found in ' + AR_QR_CODE_CONFIG_PATH + '.');
-
-	}
-
-	return configContent.replace(AR_QR_CODE_MODEL_PATH_PATTERN, function (match, prefix) {
-
-		return prefix + JSON.stringify(AR_QR_CODE_MODEL_PATH);
-
-	});
-
-}
-
-function injectARQRCodePageTitle(configContent, pageTitle) {
-
-	// Fail clearly if a future template change removes or renames the expected setting.
-	if (!AR_QR_CODE_PAGE_TITLE_PATTERN.test(configContent)) {
-
-		throw new Error('The QR tracker page title was not found in ' + AR_QR_CODE_CONFIG_PATH + '.');
-
-	}
-
-	return configContent.replace(AR_QR_CODE_PAGE_TITLE_PATTERN, function (match, prefix) {
-
-		// prefix is captured group 1 (for example, `"pageTitle": `). The old value in
-		// match is discarded, and JSON.stringify adds a safely escaped replacement value.
-		return prefix + JSON.stringify(pageTitle);
-
-	});
-
-}
-
-function injectARQRCodeTrackingData(configContent, qrCodeData) {
-
-	if (!AR_QR_CODE_TRACKING_DATA_PATTERN.test(configContent)) {
-
-		throw new Error('The QR tracker matching data setting was not found in ' + AR_QR_CODE_CONFIG_PATH + '.');
-
-	}
-
-	return configContent.replace(AR_QR_CODE_TRACKING_DATA_PATTERN, function (match, prefix) {
-
-		// JSON.stringify preserves QR payloads containing quotes, backslashes, or line breaks.
-		return prefix + JSON.stringify(qrCodeData);
-
-	});
-
-}
 
 async function fetchARQRCodeTemplateFile(filePath) {
 
@@ -1796,25 +1735,51 @@ option.onClick(async function () {
 
 		// Reuse one title for both the browser tab and the downloaded ZIP filename.
 		const appTitle = config.getKey('project/title') || 'AR QR Code Tracker App';
+		// GLTFExporter converts the scene being edited into GLB, a single binary file
+		// that stores the 3D objects, materials, and animations for the exported app.
 		const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
+		// Work on a copy so removing editor-only objects cannot alter the open project.
 		const scene = createSceneCloneWithoutNamedObjects(editor.scene, [DEFAULT_MARKER_PLANE_NAME]);
 		const animations = getAnimations(scene);
 		const exporter = new GLTFExporter();
+		// Promise.all starts both independent jobs together: export the 3D model and
+		// fetch the template configuration file. "await" pauses here until both finish.
 		const [model, configResponse] = await Promise.all([
 			exporter.parseAsync(scene, { binary: true, animations: animations }),
 			fetchARQRCodeTemplateFile(AR_QR_CODE_CONFIG_PATH)
 		]);
-		// Build the exported config without changing the template file stored in the editor.
-		let renderConfig = await configResponse.text();
-		renderConfig = injectARQRCodeModelPath(renderConfig);
-		renderConfig = injectARQRCodePageTitle(renderConfig, appTitle);
-		// The sidebar getter returns an empty string when specific-code tracking is unchecked.
-		renderConfig = injectARQRCodeTrackingData(renderConfig, getTrackedQRCodeData());
-		// Adding renderConfig at the template's config path replaces that file in the ZIP.
+
+		// A fetch response is not the file text itself, so text() reads its contents.
+		const renderConfigTemplate = await configResponse.text();
+		// The sidebar saves each control in the editor's config storage. This helper
+		// collects those saved values and includes their full locations in the JSON tree.
+		const renderSettingValues = getQRCodeRenderSettingValues( config );
+
+		// Build a new render-config.json for this download. The original template on
+		// disk is left unchanged. Besides the sidebar values, three fields come from
+		// the current export: where its GLB is stored, its title, and the QR data to match.
+		const renderConfig = createQRCodeRenderConfig(
+			renderConfigTemplate,
+			renderSettingValues,
+			{
+				// The ZIP stores the newly exported 3D scene at this relative path.
+				modelPath: AR_QR_CODE_MODEL_PATH,
+				// The exported web page displays the same title as the editor project.
+				pageTitle: appTitle,
+				// An empty string means "track the first QR code found". Otherwise, the
+				// exported app tracks only a QR code containing this exact text.
+				trackMatchingQRCodeData: getTrackedQRCodeData()
+			}
+		);
+
+		// Brackets let a variable supply an object key. Here they place each generated
+		// file at its required path inside the ZIP. The new config replaces the template
+		// config, while the GLB becomes the model that the QR tracker displays.
 		const content = await createARQRCodeTrackerZip({
 			[AR_QR_CODE_CONFIG_PATH]: renderConfig,
 			[AR_QR_CODE_MODEL_PATH]: model
 		});
+		// Convert the completed ZIP Blob into a browser download for the user.
 		save(content, appTitle + '.zip');
 
 	} catch (error) {

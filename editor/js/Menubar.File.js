@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 import { zipSync, strToU8, ZipPassThrough } from 'three/addons/libs/fflate.module.js';// use Uint8Array(content); for the binary camera_para.dat file
 import { AddObjectCommand } from './commands/AddObjectCommand.js'; //needed for creating the objects in the default template
-import { getTrackedQRCodeData } from './Sidebar.QRCodeGenerator.js';
+import { getTrackedQRCodeData, getQRCodeImageForPublishing } from './Sidebar.QRCodeGenerator.js';
 // These helpers connect the QR sidebar to publishing. The first builds the final
 // render-config.json text, and the second reads the settings currently shown in the sidebar.
 import { createQRCodeRenderConfig, getQRCodeRenderSettingValues } from './QRCodeRenderSettings.js';
@@ -24,6 +24,7 @@ const AR_MARKER_APP_EXPORT_SETTINGS_BLOCK = /\/\/ __AR_MARKER_APP_EXPORT_SETTING
 const AR_QR_CODE_TEMPLATE_BASE_PATH = '../editor/files/ARQRCodeExportFiles/';
 const AR_QR_CODE_CONFIG_PATH = 'src/config/render-config.json';
 const AR_QR_CODE_MODEL_PATH = 'models/model.glb';
+const AR_QR_CODE_IMAGE_PATH = 'qrcode.png';
 
 const AR_QR_CODE_EXPORT_FILES = [
 	'Readme.md',
@@ -1775,10 +1776,19 @@ option.onClick(async function () {
 		// Brackets let a variable supply an object key. Here they place each generated
 		// file at its required path inside the ZIP. The new config replaces the template
 		// config, while the GLB becomes the model that the QR tracker displays.
-		const content = await createARQRCodeTrackerZip({
+		const generatedFiles = {
 			[AR_QR_CODE_CONFIG_PATH]: renderConfig,
 			[AR_QR_CODE_MODEL_PATH]: model
-		});
+		};
+		const qrCodeImage = getQRCodeImageForPublishing();
+
+		if ( qrCodeImage !== undefined ) {
+
+			generatedFiles[ AR_QR_CODE_IMAGE_PATH ] = qrCodeImage;
+
+		}
+
+		const content = await createARQRCodeTrackerZip( generatedFiles );
 		// Convert the completed ZIP Blob into a browser download for the user.
 		save(content, appTitle + '.zip');
 

@@ -220,6 +220,9 @@ function SidebarQRCodeGenerator( editor ) {
 	const qrCodePreview = new UISpan();
 	qrCodePreview.setDisplay( 'block' );
 	qrCodePreview.dom.style.width = 'fit-content';
+	qrCodePreview.dom.style.maxWidth = '100%';
+	qrCodePreview.dom.style.position = 'relative';
+	qrCodePreview.dom.style.aspectRatio = '1';
 	qrCodePreview.dom.style.margin = '0 auto';
 	qrCodePreview.dom.style.background = '#fff';
 	qrCodePreview.dom.style.boxSizing = 'border-box';
@@ -240,12 +243,96 @@ function SidebarQRCodeGenerator( editor ) {
 	generatorInput.dom.style.boxSizing = 'border-box';
 	content.add( generatorInput );
 
+	function addGeneratorSettingRow( labelText, control, infoText ) {
+
+		const row = new UIRow();
+		row.setMarginBottom( '6px' );
+		row.dom.style.display = 'grid';
+		row.dom.style.gridTemplateColumns = 'minmax(0, 1fr) 16px 96px';
+		row.dom.style.gap = '6px';
+		row.dom.style.alignItems = 'center';
+
+		const label = new UIText( labelText );
+		label.dom.style.whiteSpace = 'normal';
+		label.dom.style.overflowWrap = 'anywhere';
+		row.add( label );
+		row.dom.appendChild( makeInfoButton( infoText ) );
+		row.add( control );
+		content.add( row );
+
+	}
+
+	const generatorSettingsTitle = new UIText( 'QR Image Settings' );
+	generatorSettingsTitle.setDisplay( 'block' );
+	generatorSettingsTitle.setFontSize( '13px' );
+	generatorSettingsTitle.setMarginBottom( '8px' );
+	content.add( generatorSettingsTitle );
+
+	const generatorSize = new UINumber( 192 );
+	generatorSize.setPrecision( 0 );
+	generatorSize.setRange( 64, 2048 );
+	generatorSize.setStep( 16 );
+	generatorSize.setWidth( '96px' );
+	generatorSize.setValue( 192 );
+	generatorSize.dom.setAttribute( 'aria-label', 'QR Code size in pixels' );
+	addGeneratorSettingRow(
+		'Code Size (px)',
+		generatorSize,
+		'Width and height of the QR symbol in pixels before the quiet zone is added. Larger sizes produce sharper printed codes and help dense codes scan reliably.'
+	);
+
+	const generatorForegroundColor = new UIColor().setValue( '#000000' ).setWidth( '96px' );
+	generatorForegroundColor.dom.setAttribute( 'aria-label', 'QR Code foreground color' );
+	addGeneratorSettingRow(
+		'Foreground',
+		generatorForegroundColor,
+		'Color of the dark QR modules. Choose a color with strong contrast against the background.'
+	);
+
+	const generatorBackgroundColor = new UIColor().setValue( '#ffffff' ).setWidth( '96px' );
+	generatorBackgroundColor.dom.setAttribute( 'aria-label', 'QR Code background color' );
+	addGeneratorSettingRow(
+		'Background',
+		generatorBackgroundColor,
+		'Color of the light QR modules and surrounding quiet zone. A light, high-contrast background is the most reliable.'
+	);
+
+	const generatorCorrectionLevel = new UISelect().setWidth( '96px' );
+	generatorCorrectionLevel.setOptions( {
+		L: 'Low - 7%',
+		M: 'Med - 15%',
+		Q: 'Quartile - 25%',
+		H: 'High - 30%'
+	} );
+	generatorCorrectionLevel.setValue( 'H' );
+	generatorCorrectionLevel.dom.setAttribute( 'aria-label', 'QR Code error correction level' );
+	addGeneratorSettingRow(
+		'Error Correction',
+		generatorCorrectionLevel,
+		'Approximate percentage of damage the QR code can recover from. Higher levels improve resilience but produce a denser code.'
+	);
+
+	const generatorQuietZone = new UINumber( 4 );
+	generatorQuietZone.setPrecision( 0 );
+	generatorQuietZone.setRange( 0, 16 );
+	generatorQuietZone.setStep( 1 );
+	generatorQuietZone.setWidth( '96px' );
+	generatorQuietZone.setValue( 4 );
+	generatorQuietZone.dom.setAttribute( 'aria-label', 'QR Code quiet zone in modules' );
+	addGeneratorSettingRow(
+		'Quiet Zone',
+		generatorQuietZone,
+		'Blank margin around the QR code, measured in modules. Four modules is the QR standard and is recommended for reliable scanning.'
+	);
+
 	let generatedCanvas;
 	let generatedQuietZone = 0;
+	let generatedBackgroundColor = '#ffffff';
 
-	const saveQRCodeButton = new UIButton( 'Save QR Code' );
+	const saveQRCodeButton = new UIButton( 'Download Current QR Code' );
 	saveQRCodeButton.setWidth( '100%' );
 	saveQRCodeButton.setDisplay( 'none' );
+	saveQRCodeButton.setMarginTop( '8px' );
 	saveQRCodeButton.setMarginBottom( '12px' );
 	saveQRCodeButton.onClick( () => {
 
@@ -256,7 +343,7 @@ function SidebarQRCodeGenerator( editor ) {
 		downloadCanvas.height = generatedCanvas.height + generatedQuietZone * 2;
 
 		const context = downloadCanvas.getContext( '2d' );
-		context.fillStyle = '#fff';
+		context.fillStyle = generatedBackgroundColor;
 		context.fillRect( 0, 0, downloadCanvas.width, downloadCanvas.height );
 		context.drawImage( generatedCanvas, generatedQuietZone, generatedQuietZone );
 
@@ -268,6 +355,7 @@ function SidebarQRCodeGenerator( editor ) {
 		link.remove();
 
 	} );
+	generatedOutput.add( saveQRCodeButton );
 
 	const generateQRCodeButton = new UIButton( 'Generate QR Code' );
 	generateQRCodeButton.setWidth( '100%' );
@@ -290,18 +378,42 @@ function SidebarQRCodeGenerator( editor ) {
 
 		try {
 
+			const size = generatorSize.getValue();
+			const foregroundColor = generatorForegroundColor.getValue();
+			const backgroundColor = generatorBackgroundColor.getValue();
+			const quietZoneModules = generatorQuietZone.getValue();
+
 			const qrCode = new QRCode( qrCodePreview.dom, {
 				text,
-				width: 192,
-				height: 192,
-				colorDark: '#000000',
-				colorLight: '#ffffff',
-				correctLevel: QRCode.CorrectLevel.H
+				width: size,
+				height: size,
+				colorDark: foregroundColor,
+				colorLight: backgroundColor,
+				correctLevel: QRCode.CorrectLevel[ generatorCorrectionLevel.getValue() ]
 			} );
 
 			generatedCanvas = qrCodePreview.dom.querySelector( 'canvas' );
-			generatedQuietZone = Math.ceil( 192 / qrCode._oQRCode.getModuleCount() * 4 );
-			qrCodePreview.dom.style.padding = `${generatedQuietZone}px`;
+			const moduleCount = qrCode._oQRCode.getModuleCount();
+			generatedQuietZone = Math.ceil( size / moduleCount * quietZoneModules );
+			generatedBackgroundColor = backgroundColor;
+
+			const generatedSize = size + generatedQuietZone * 2;
+			const previewQuietZone = generatedQuietZone / generatedSize * 100;
+			const previewCodeSize = size / generatedSize * 100;
+			qrCodePreview.dom.style.width = `${generatedSize}px`;
+			qrCodePreview.dom.style.background = backgroundColor;
+			qrCodePreview.dom.style.padding = '0';
+
+			for ( const outputElement of qrCodePreview.dom.querySelectorAll( 'canvas, img' ) ) {
+
+				outputElement.style.position = 'absolute';
+				outputElement.style.left = `${previewQuietZone}%`;
+				outputElement.style.top = `${previewQuietZone}%`;
+				outputElement.style.width = `${previewCodeSize}%`;
+				outputElement.style.height = `${previewCodeSize}%`;
+
+			}
+
 			generatedOutput.setDisplay( 'block' );
 			saveQRCodeButton.setDisplay( '' );
 
@@ -330,7 +442,6 @@ function SidebarQRCodeGenerator( editor ) {
 
 	} );
 	content.add( generateQRCodeButton );
-	content.add( saveQRCodeButton );
 
 	content.add( new UIHorizontalRule().setMarginBottom( '12px' ) );
 

@@ -96,6 +96,7 @@ function Editor() {
 		viewportShadingChanged: new Signal(),
 		viewportLightingPreviewChanged: new Signal(),
 		viewportMarkerPreviewChanged: new Signal(),
+		nftMarkerChanged: new Signal(),
 
 		intersectionsDetected: new Signal(),
 

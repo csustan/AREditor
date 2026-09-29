@@ -4,6 +4,7 @@ import { zipSync, strToU8, ZipPassThrough } from 'three/addons/libs/fflate.modul
 import { AddObjectCommand } from './commands/AddObjectCommand.js'; //needed for creating the objects in the default template
 import { getTrackedQRCodeData, getQRCodeImageForPublishing } from './Sidebar.QRCodeGenerator.js';
 import { AR_MARKER_PREVIEW_NAME as DEFAULT_MARKER_PLANE_NAME } from './ARMarkerPreview.js';
+import { NFT_MARKER_PREVIEW_NAME } from './NFTMarkerPreview.js';
 // These helpers connect the QR sidebar to publishing. The first builds the final
 // render-config.json text, and the second reads the settings currently shown in the sidebar.
 import { createQRCodeRenderConfig, getQRCodeRenderSettingValues } from './QRCodeRenderSettings.js';
@@ -15,6 +16,8 @@ import { createQRCodeRenderConfig, getQRCodeRenderSettingValues } from './QRCode
 //SaveAs for saving the JSZip zipped file
 //import { saveAs } from './libs/FileSaver.js';
 import { UIPanel, UIRow, UIHorizontalRule } from './libs/ui.js';
+
+const EDITOR_PREVIEW_OBJECT_NAMES = [ DEFAULT_MARKER_PLANE_NAME, NFT_MARKER_PREVIEW_NAME ];
 
 // Finds the generated settings block inside the APP.js template so Publish AR Marker App can replace only that block.
 const AR_MARKER_APP_EXPORT_SETTINGS_BLOCK = /\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_START__[\s\S]*?\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_END__/;
@@ -785,7 +788,7 @@ function MenubarFile(editor) {
 
 
 		//prepare to build the app.json file for export
-		let output = createEditorExportDataWithoutNamedObjects(editor, [DEFAULT_MARKER_PLANE_NAME]);
+		let output = createEditorExportDataWithoutNamedObjects(editor, EDITOR_PREVIEW_OBJECT_NAMES);
 		output.metadata.type = 'App';
 		delete output.history;
 
@@ -1353,7 +1356,7 @@ async function publishARNFTApp() {
 	var zip = new JSZip();
 
 	// Export app.json (ObjectLoader format) — fully preserves ShaderMaterial and editor scripts
-	let outputForARNFT = createEditorExportDataWithoutNamedObjects(editor, [DEFAULT_MARKER_PLANE_NAME]);
+	let outputForARNFT = createEditorExportDataWithoutNamedObjects(editor, EDITOR_PREVIEW_OBJECT_NAMES);
 	outputForARNFT.metadata.type = 'App';
 	delete outputForARNFT.history;
 	toZipForARNFT['app.json'] = JSON.stringify(outputForARNFT, null, '\t');
@@ -1720,7 +1723,7 @@ async function publishARQRCodeTrackerApp() {
 		// that stores the 3D objects, materials, and animations for the exported app.
 		const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
 		// Work on a copy so removing editor-only objects cannot alter the open project.
-		const scene = createSceneCloneWithoutNamedObjects(editor.scene, [DEFAULT_MARKER_PLANE_NAME]);
+		const scene = createSceneCloneWithoutNamedObjects(editor.scene, EDITOR_PREVIEW_OBJECT_NAMES);
 		const animations = getAnimations(scene);
 		const exporter = new GLTFExporter();
 		// Promise.all starts both independent jobs together: export the 3D model and

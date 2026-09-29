@@ -80,6 +80,7 @@ const assets = [
 	'./images/scale.svg',
 	'./images/translate.svg',
 	'./files/markerForScale.png',
+	'./files/ARNFTExportFiles/img/pinball.jpg',
 
 	'./js/libs/codemirror/codemirror.css',
 	'./js/libs/codemirror/theme/monokai.css',
@@ -127,6 +128,7 @@ const assets = [
 	'./js/Storage.js',
 
 	'./js/ARMarkerPreview.js',
+	'./js/NFTMarkerPreview.js',
 	'./js/Editor.js',
 	'./js/Config.js',
 	'./js/History.js',

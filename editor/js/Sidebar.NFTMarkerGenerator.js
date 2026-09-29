@@ -759,6 +759,8 @@ function SidebarNFTMarkerGenerator(editor) {
 			window.NFT_Zft = lastGoodZft; // Restore the optional zft file if it existed for the last successful generation.
 			// Keep download naming in sync with the restored files:
 			window.NFT_ImageBlob = lastGoodImageBlob; // Even though lastGoodOutputName is already used by downloadBtn.
+			window.NFT_Dpi = lastGoodDpi;
+			editor.signals.nftMarkerChanged.dispatch();
 
 			// Restore preview from last good generation
 			if ( lastGoodPreviewObjectURL ) {
@@ -781,6 +783,8 @@ function SidebarNFTMarkerGenerator(editor) {
 			window.NFT_Fset3 = null;
 			window.NFT_Zft = null;
 			window.NFT_ImageBlob = null;
+			window.NFT_Dpi = null;
+			editor.signals.nftMarkerChanged.dispatch();
 
 			refreshDownloadUiState();
 			showDefaultNftMarkerPreview();
@@ -880,8 +884,10 @@ function SidebarNFTMarkerGenerator(editor) {
 				window.NFT_Zft = snapshot.zft;
 
 				window.NFT_ImageBlob = snapshot.imageBlob;
+				window.NFT_Dpi = snapshot.dpi;
 
 				refreshDownloadUiState();
+				editor.signals.nftMarkerChanged.dispatch();
 
 			}
 
@@ -921,6 +927,7 @@ function SidebarNFTMarkerGenerator(editor) {
 	let lastGoodFset = null;
 	let lastGoodFset3 = null;
 	let lastGoodImageBlob = null;
+	let lastGoodDpi = null;
 	let lastGoodZft = null;
 	let lastGoodPreviewObjectURL = null;
 	let lastGoodOutputName = null; // keeps downloads in sync with the last-good generated files
@@ -947,13 +954,16 @@ function SidebarNFTMarkerGenerator(editor) {
 		window.NFT_Fset3 = null;
 		window.NFT_Zft = null;
 		window.NFT_ImageBlob = null;
+		window.NFT_Dpi = null;
 
 		lastGoodIset = null;
 		lastGoodFset = null;
 		lastGoodFset3 = null;
 		lastGoodZft = null;
 		lastGoodImageBlob = null;
+		lastGoodDpi = null;
 		lastGoodOutputName = null;
+		editor.signals.nftMarkerChanged.dispatch();
 
 		if ( previewObjectURL ) {
 			URL.revokeObjectURL( previewObjectURL );
@@ -1041,6 +1051,7 @@ function SidebarNFTMarkerGenerator(editor) {
 			fset3: window.NFT_Fset3,
 			zft: window.NFT_Zft,
 			imageBlob: window.NFT_ImageBlob,
+			dpi: window.NFT_Dpi,
 			previewUrl: previewObjectURL // may be null if we’re just showing an uploaded image
 		};
 
@@ -1088,6 +1099,7 @@ function SidebarNFTMarkerGenerator(editor) {
 			fset3: window.NFT_Fset3,
 			zft: window.NFT_Zft,
 			imageBlob: window.NFT_ImageBlob,
+			dpi: window.NFT_Dpi,
 			previewUrl: previewObjectURL
 		};
 
@@ -1102,6 +1114,7 @@ function SidebarNFTMarkerGenerator(editor) {
 		window.NFT_Fset3 = null;
 		window.NFT_Zft = null;
 		window.NFT_ImageBlob = null;
+		window.NFT_Dpi = null;
 
 		if ( !loadedImage ) {
 			statusText.setValue('Please load an image first.');
@@ -1477,7 +1490,10 @@ function SidebarNFTMarkerGenerator(editor) {
 			lastGoodFset3 = window.NFT_Fset3;
 			lastGoodZft = window.NFT_Zft;
 			lastGoodImageBlob = window.NFT_ImageBlob;
+			window.NFT_Dpi = options.dpi;
+			lastGoodDpi = window.NFT_Dpi;
 			lastGoodOutputName = outputName;
+			editor.signals.nftMarkerChanged.dispatch();
 
 			// Also preserve the preview URL we just created
 			if ( lastGoodPreviewObjectURL ) {

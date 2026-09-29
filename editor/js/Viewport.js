@@ -10,6 +10,7 @@ import { ViewportCamera } from './Viewport.Camera.js';
 import { ViewportShading } from './Viewport.Shading.js';
 import { ViewportInfo } from './Viewport.Info.js';
 import { AR_MARKER_PREVIEW_NAME, createARMarkerPreview } from './ARMarkerPreview.js';
+import { NFT_MARKER_PREVIEW_NAME, createNFTMarkerPreview, updateNFTMarkerPreview } from './NFTMarkerPreview.js';
 
 import { ViewHelper } from './Viewport.ViewHelper.js';
 import { VR } from './Viewport.VR.js';
@@ -114,25 +115,76 @@ function Viewport( editor ) {
 
 	function applyViewportMarkerPreview() {
 
-		const showMarkerPreview = editor.viewportMarkerPreview === 'ar';
-		let markerPreview = scene.getObjectByName( AR_MARKER_PREVIEW_NAME );
+		const showARMarkerPreview = editor.viewportMarkerPreview === 'ar';
+		const showNFTMarkerPreview = editor.viewportMarkerPreview === 'nft';
+		const arMarkerPreviews = [];
+		const nftMarkerPreviews = [];
+		let visibilityChanged = false;
 
-		if ( markerPreview === undefined && showMarkerPreview ) {
+		scene.traverse( function ( object ) {
 
-			markerPreview = createARMarkerPreview();
-			editor.addObject( markerPreview );
+			if ( object.name === AR_MARKER_PREVIEW_NAME ) arMarkerPreviews.push( object );
+			if ( object.name === NFT_MARKER_PREVIEW_NAME ) nftMarkerPreviews.push( object );
+
+		} );
+
+		if ( arMarkerPreviews.length === 0 && showARMarkerPreview ) {
+
+			const arMarkerPreview = createARMarkerPreview();
+			arMarkerPreviews.push( arMarkerPreview );
+			editor.addObject( arMarkerPreview );
 
 		}
 
-		if ( markerPreview !== undefined && markerPreview.visible !== showMarkerPreview ) {
+		if ( nftMarkerPreviews.length === 0 && showNFTMarkerPreview ) {
 
-			markerPreview.visible = showMarkerPreview;
+			const nftMarkerPreview = createNFTMarkerPreview( function ( markerPreview ) {
 
-			if ( showMarkerPreview === false && editor.selected === markerPreview ) {
+				signals.geometryChanged.dispatch( markerPreview );
+				signals.materialChanged.dispatch( markerPreview.material );
+				signals.sceneGraphChanged.dispatch();
 
-				editor.deselect();
+			} );
+			nftMarkerPreviews.push( nftMarkerPreview );
+			editor.addObject( nftMarkerPreview );
+
+		}
+
+		for ( const arMarkerPreview of arMarkerPreviews ) {
+
+			if ( arMarkerPreview.visible !== showARMarkerPreview ) {
+
+				arMarkerPreview.visible = showARMarkerPreview;
+				visibilityChanged = true;
 
 			}
+
+		}
+
+		for ( const nftMarkerPreview of nftMarkerPreviews ) {
+
+			if ( nftMarkerPreview.visible !== showNFTMarkerPreview ) {
+
+				nftMarkerPreview.visible = showNFTMarkerPreview;
+				visibilityChanged = true;
+
+			}
+
+		}
+
+		if (
+			editor.selected !== null &&
+			(
+				( arMarkerPreviews.includes( editor.selected ) && showARMarkerPreview === false ) ||
+				( nftMarkerPreviews.includes( editor.selected ) && showNFTMarkerPreview === false )
+			)
+		) {
+
+			editor.deselect();
+
+		}
+
+		if ( visibilityChanged ) {
 
 			signals.sceneGraphChanged.dispatch();
 
@@ -787,6 +839,30 @@ function Viewport( editor ) {
 	signals.viewportMarkerPreviewChanged.add( function () {
 
 		applyViewportMarkerPreview();
+		render();
+
+	} );
+
+	signals.nftMarkerChanged.add( function () {
+
+		const markerPreview = scene.getObjectByName( NFT_MARKER_PREVIEW_NAME );
+
+		if ( markerPreview !== undefined ) {
+
+			updateNFTMarkerPreview( markerPreview, function ( updatedMarkerPreview ) {
+
+				signals.geometryChanged.dispatch( updatedMarkerPreview );
+				signals.materialChanged.dispatch( updatedMarkerPreview.material );
+				signals.sceneGraphChanged.dispatch();
+
+			} );
+
+		} else {
+
+			applyViewportMarkerPreview();
+
+		}
+
 		render();
 
 	} );

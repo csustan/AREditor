@@ -9,6 +9,7 @@ import {
 	getQRCodeSettingConfigKey,
 	getQRCodeRenderSettingValue
 } from './QRCodeRenderSettings.js';
+import { setGeneratedQRCodeMarkerImage } from './QRCodeMarkerPreview.js';
 
 // These settings are shared by the sidebar controls and the QR publish command
 // for the current editor session.
@@ -824,6 +825,8 @@ function SidebarQRCodeGenerator( editor ) {
 			generationStatus.setValue( 'Preview matches the current content and settings.' );
 			generationStatus.setColor( '#888' );
 			generationStatus.dom.style.fontWeight = 'normal';
+			setGeneratedQRCodeMarkerImage( generatedQRCodeImageDataURL );
+			editor.signals.qrCodeMarkerChanged.dispatch();
 
 		} catch ( error ) {
 

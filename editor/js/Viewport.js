@@ -11,6 +11,7 @@ import { ViewportShading } from './Viewport.Shading.js';
 import { ViewportInfo } from './Viewport.Info.js';
 import { AR_MARKER_PREVIEW_NAME, createARMarkerPreview } from './ARMarkerPreview.js';
 import { NFT_MARKER_PREVIEW_NAME, createNFTMarkerPreview, updateNFTMarkerPreview } from './NFTMarkerPreview.js';
+import { QR_CODE_MARKER_PREVIEW_NAME, createQRCodeMarkerPreview, updateQRCodeMarkerPreview } from './QRCodeMarkerPreview.js';
 
 import { ViewHelper } from './Viewport.ViewHelper.js';
 import { VR } from './Viewport.VR.js';
@@ -117,14 +118,17 @@ function Viewport( editor ) {
 
 		const showARMarkerPreview = editor.viewportMarkerPreview === 'ar';
 		const showNFTMarkerPreview = editor.viewportMarkerPreview === 'nft';
+		const showQRCodeMarkerPreview = editor.viewportMarkerPreview === 'qr';
 		const arMarkerPreviews = [];
 		const nftMarkerPreviews = [];
+		const qrCodeMarkerPreviews = [];
 		let visibilityChanged = false;
 
 		scene.traverse( function ( object ) {
 
 			if ( object.name === AR_MARKER_PREVIEW_NAME ) arMarkerPreviews.push( object );
 			if ( object.name === NFT_MARKER_PREVIEW_NAME ) nftMarkerPreviews.push( object );
+			if ( object.name === QR_CODE_MARKER_PREVIEW_NAME ) qrCodeMarkerPreviews.push( object );
 
 		} );
 
@@ -150,6 +154,19 @@ function Viewport( editor ) {
 
 		}
 
+		if ( qrCodeMarkerPreviews.length === 0 && showQRCodeMarkerPreview ) {
+
+			const qrCodeMarkerPreview = createQRCodeMarkerPreview( function ( markerPreview ) {
+
+				signals.materialChanged.dispatch( markerPreview.material );
+				signals.sceneGraphChanged.dispatch();
+
+			} );
+			qrCodeMarkerPreviews.push( qrCodeMarkerPreview );
+			editor.addObject( qrCodeMarkerPreview );
+
+		}
+
 		for ( const arMarkerPreview of arMarkerPreviews ) {
 
 			if ( arMarkerPreview.visible !== showARMarkerPreview ) {
@@ -172,11 +189,23 @@ function Viewport( editor ) {
 
 		}
 
+		for ( const qrCodeMarkerPreview of qrCodeMarkerPreviews ) {
+
+			if ( qrCodeMarkerPreview.visible !== showQRCodeMarkerPreview ) {
+
+				qrCodeMarkerPreview.visible = showQRCodeMarkerPreview;
+				visibilityChanged = true;
+
+			}
+
+		}
+
 		if (
 			editor.selected !== null &&
 			(
 				( arMarkerPreviews.includes( editor.selected ) && showARMarkerPreview === false ) ||
-				( nftMarkerPreviews.includes( editor.selected ) && showNFTMarkerPreview === false )
+				( nftMarkerPreviews.includes( editor.selected ) && showNFTMarkerPreview === false ) ||
+				( qrCodeMarkerPreviews.includes( editor.selected ) && showQRCodeMarkerPreview === false )
 			)
 		) {
 
@@ -852,6 +881,29 @@ function Viewport( editor ) {
 			updateNFTMarkerPreview( markerPreview, function ( updatedMarkerPreview ) {
 
 				signals.geometryChanged.dispatch( updatedMarkerPreview );
+				signals.materialChanged.dispatch( updatedMarkerPreview.material );
+				signals.sceneGraphChanged.dispatch();
+
+			} );
+
+		} else {
+
+			applyViewportMarkerPreview();
+
+		}
+
+		render();
+
+	} );
+
+	signals.qrCodeMarkerChanged.add( function () {
+
+		const markerPreview = scene.getObjectByName( QR_CODE_MARKER_PREVIEW_NAME );
+
+		if ( markerPreview !== undefined ) {
+
+			updateQRCodeMarkerPreview( markerPreview, function ( updatedMarkerPreview ) {
+
 				signals.materialChanged.dispatch( updatedMarkerPreview.material );
 				signals.sceneGraphChanged.dispatch();
 

@@ -5,6 +5,7 @@ import { AddObjectCommand } from './commands/AddObjectCommand.js'; //needed for 
 import { getTrackedQRCodeData, getQRCodeImageForPublishing } from './Sidebar.QRCodeGenerator.js';
 import { AR_MARKER_PREVIEW_NAME as DEFAULT_MARKER_PLANE_NAME } from './ARMarkerPreview.js';
 import { NFT_MARKER_PREVIEW_NAME } from './NFTMarkerPreview.js';
+import { QR_CODE_MARKER_PREVIEW_NAME } from './QRCodeMarkerPreview.js';
 // These helpers connect the QR sidebar to publishing. The first builds the final
 // render-config.json text, and the second reads the settings currently shown in the sidebar.
 import { createQRCodeRenderConfig, getQRCodeRenderSettingValues } from './QRCodeRenderSettings.js';
@@ -17,7 +18,7 @@ import { createQRCodeRenderConfig, getQRCodeRenderSettingValues } from './QRCode
 //import { saveAs } from './libs/FileSaver.js';
 import { UIPanel, UIRow, UIHorizontalRule } from './libs/ui.js';
 
-const EDITOR_PREVIEW_OBJECT_NAMES = [ DEFAULT_MARKER_PLANE_NAME, NFT_MARKER_PREVIEW_NAME ];
+const EDITOR_PREVIEW_OBJECT_NAMES = [ DEFAULT_MARKER_PLANE_NAME, NFT_MARKER_PREVIEW_NAME, QR_CODE_MARKER_PREVIEW_NAME ];
 
 // Finds the generated settings block inside the APP.js template so Publish AR Marker App can replace only that block.
 const AR_MARKER_APP_EXPORT_SETTINGS_BLOCK = /\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_START__[\s\S]*?\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_END__/;

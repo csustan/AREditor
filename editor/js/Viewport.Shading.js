@@ -48,7 +48,8 @@ function ViewportShading( editor ) {
 	markerPreviewSelect.setOptions( {
 		'off': 'Marker Preview Off',
 		'ar': 'AR Marker Preview',
-		'nft': 'NFT Marker Preview'
+		'nft': 'NFT Marker Preview',
+		'qr': 'QR Marker Preview'
 	} );
 	markerPreviewSelect.setValue( editor.viewportMarkerPreview );
 	markerPreviewSelect.onChange( function () {

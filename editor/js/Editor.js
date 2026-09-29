@@ -95,6 +95,7 @@ function Editor() {
 		viewportCameraChanged: new Signal(),
 		viewportShadingChanged: new Signal(),
 		viewportLightingPreviewChanged: new Signal(),
+		viewportMarkerPreviewChanged: new Signal(),
 
 		intersectionsDetected: new Signal(),
 
@@ -133,6 +134,7 @@ function Editor() {
 	this.viewportCamera = this.camera;
 	this.viewportShading = 'default';
 	this.viewportLightingPreview = this.config.getKey( 'settings/viewport/lightingPreview' ) || 'off';
+	this.viewportMarkerPreview = this.config.getKey( 'settings/viewport/markerPreview' ) || 'off';
 
 	this.addCamera( this.camera );
 
@@ -565,6 +567,14 @@ Editor.prototype = {
 
 	},
 
+	setViewportMarkerPreview: function ( value ) {
+
+		this.viewportMarkerPreview = value;
+		this.config.setKey( 'settings/viewport/markerPreview', value );
+		this.signals.viewportMarkerPreviewChanged.dispatch();
+
+	},
+
 	//
 
 	select: function ( object ) {
@@ -626,6 +636,8 @@ Editor.prototype = {
 
 	//The clear function which is also used when the file > new menue is used
 	clear: function () { //erly adaptation used a boolean called "optionalIsNewFlag" which is no longer needed since the default template is now loaded at the Menbar.File.js
+
+		this.setViewportMarkerPreview( 'off' );
 
 		this.history.clear();
 		this.storage.clear();

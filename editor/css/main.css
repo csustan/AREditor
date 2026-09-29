@@ -519,6 +519,39 @@ select {
 
 /* */
 
+@media all and ( max-width: 1000px ) {
+
+	#viewport-camera-select,
+	#viewport-shading-select,
+	#viewport-lighting-preview-select,
+	#viewport-marker-preview-select {
+		box-sizing: border-box;
+		width: calc( 50% - 36px ) !important;
+	}
+
+	#viewport-camera-select,
+	#viewport-marker-preview-select {
+		left: 52px !important;
+		right: auto !important;
+	}
+
+	#viewport-shading-select,
+	#viewport-lighting-preview-select {
+		right: 10px !important;
+	}
+
+	#viewport-camera-select,
+	#viewport-shading-select {
+		top: 10px !important;
+	}
+
+	#viewport-marker-preview-select,
+	#viewport-lighting-preview-select {
+		top: 40px !important;
+	}
+
+}
+
 @media all and ( max-width: 600px ) {
 
 	#resizer {

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { zipSync, strToU8, ZipPassThrough } from 'three/addons/libs/fflate.module.js';// use Uint8Array(content); for the binary camera_para.dat file
 import { AddObjectCommand } from './commands/AddObjectCommand.js'; //needed for creating the objects in the default template
 import { getTrackedQRCodeData, getQRCodeImageForPublishing } from './Sidebar.QRCodeGenerator.js';
+import { AR_MARKER_PREVIEW_NAME as DEFAULT_MARKER_PLANE_NAME } from './ARMarkerPreview.js';
 // These helpers connect the QR sidebar to publishing. The first builds the final
 // render-config.json text, and the second reads the settings currently shown in the sidebar.
 import { createQRCodeRenderConfig, getQRCodeRenderSettingValues } from './QRCodeRenderSettings.js';
@@ -14,9 +15,6 @@ import { createQRCodeRenderConfig, getQRCodeRenderSettingValues } from './QRCode
 //SaveAs for saving the JSZip zipped file
 //import { saveAs } from './libs/FileSaver.js';
 import { UIPanel, UIRow, UIHorizontalRule } from './libs/ui.js';
-
-// Use one shared name so that the "default template" and export filter will stay in sync.
-const DEFAULT_MARKER_PLANE_NAME = 'DefaultMarkerPlaneForScale';
 
 // Finds the generated settings block inside the APP.js template so Publish AR Marker App can replace only that block.
 const AR_MARKER_APP_EXPORT_SETTINGS_BLOCK = /\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_START__[\s\S]*?\/\/ __AR_MARKER_APP_EXPORT_SETTINGS_END__/;
@@ -316,42 +314,7 @@ function MenubarFile(editor) {
 		if (confirm('Any unsaved data will be lost, and the Default Template will be loaded. Are you sure?')) {
 
 			editor.clear(); //flaging that this is a New rather than a Clear //removing the flag and moving the scene objects/light generation to this function
-
-			const markerPlaneGeometry = new THREE.PlaneGeometry(1, 1);
-
-			// Load the image texture
-			const markerTextureLoader = new THREE.TextureLoader();
-			const markerTexture = markerTextureLoader.load('files/markerForScale.png');
-
-			// Create a material with the image texture
-			const markerMaterial = new THREE.MeshBasicMaterial({ map: markerTexture });
-
-			// Create a mesh using the plane geometry and material
-			const markerPlane = new THREE.Mesh(markerPlaneGeometry, markerMaterial);
-
-			//If the Marker Generator already has a custom generated marker image,
-			//use it here so the default template plane matches the current marker state.
-			const sharedMarkerImageDataURL = getSharedMarkerImageDataURL?.();
-			if (sharedMarkerImageDataURL) {
-				markerTextureLoader.load(sharedMarkerImageDataURL, function (texture) {
-					markerPlane.material.map = texture;
-					markerPlane.material.needsUpdate = true;
-				});
-			}
-
-			//Add a "isPreloaded" tag to filter tag the mesh to be filtered out at export
-			//markerPlane.isPreloaded = true;
-
-			//Name the plane something that can be tracked:
-			// Give the marker plane a stable name so the publish step can remove it from exports only.
-			markerPlane.name = DEFAULT_MARKER_PLANE_NAME;
-
-			// Rotate the plane to make it face up (parallel to the ground)
-			markerPlane.rotation.x = -Math.PI / 2;
-
-			//	editor.execute( new AddObjectCommand( editor, mesh ) );
-			//this.scene.add(markerPlane);
-			editor.execute(new AddObjectCommand(editor, markerPlane));
+			editor.setViewportMarkerPreview('ar');
 
 			//Add all the lights
 			//Set up light so the WebGL rendered objects will be visible

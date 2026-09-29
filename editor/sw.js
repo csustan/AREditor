@@ -79,6 +79,7 @@ const assets = [
 	'./images/rotate.svg',
 	'./images/scale.svg',
 	'./images/translate.svg',
+	'./files/markerForScale.png',
 
 	'./js/libs/codemirror/codemirror.css',
 	'./js/libs/codemirror/theme/monokai.css',
@@ -125,6 +126,7 @@ const assets = [
 	'./js/EditorControls.js',
 	'./js/Storage.js',
 
+	'./js/ARMarkerPreview.js',
 	'./js/Editor.js',
 	'./js/Config.js',
 	'./js/History.js',

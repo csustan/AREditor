@@ -1,6 +1,7 @@
 import {
   UISpan, UIText, UIInput, UISelect, UICheckbox, UINumber, UIButton, UIRow, UIHorizontalRule
 } from './libs/ui.js';
+import { AR_MARKER_PREVIEW_NAME } from './ARMarkerPreview.js';
 
 //This will generate a Canvas Element that will work as a fall back wor whn the images won't load.
 //It's returned as a URL to be compatible with the rest of the code.
@@ -89,7 +90,7 @@ function updateMarkerPreviewImage(markerUrl) {
 //If the default template marker plane exists in the scene, update its material to match the current generated marker image.
 function syncDefaultMarkerPlaneTexture(markerUrl) {
   const editor = window._editor;
-  const markerPlane = editor?.scene?.getObjectByName?.('DefaultMarkerPlaneForScale'); //Look for the default marker plane in the current editor scene.
+  const markerPlane = editor?.scene?.getObjectByName?.(AR_MARKER_PREVIEW_NAME); //Look for the default marker plane in the current editor scene.
 
   if (!markerPlane || !markerPlane.material) return; //Stop here if the default marker plane is not present or does not have a material yet.
 

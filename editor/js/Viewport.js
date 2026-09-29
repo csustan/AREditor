@@ -9,6 +9,7 @@ import { EditorControls } from './EditorControls.js';
 import { ViewportCamera } from './Viewport.Camera.js';
 import { ViewportShading } from './Viewport.Shading.js';
 import { ViewportInfo } from './Viewport.Info.js';
+import { AR_MARKER_PREVIEW_NAME, createARMarkerPreview } from './ARMarkerPreview.js';
 
 import { ViewHelper } from './Viewport.ViewHelper.js';
 import { VR } from './Viewport.VR.js';
@@ -110,6 +111,34 @@ function Viewport( editor ) {
 	const scene = editor.scene;
 	const sceneHelpers = editor.sceneHelpers;
 	let showSceneHelpers = true;
+
+	function applyViewportMarkerPreview() {
+
+		const showMarkerPreview = editor.viewportMarkerPreview === 'ar';
+		let markerPreview = scene.getObjectByName( AR_MARKER_PREVIEW_NAME );
+
+		if ( markerPreview === undefined && showMarkerPreview ) {
+
+			markerPreview = createARMarkerPreview();
+			editor.addObject( markerPreview );
+
+		}
+
+		if ( markerPreview !== undefined && markerPreview.visible !== showMarkerPreview ) {
+
+			markerPreview.visible = showMarkerPreview;
+
+			if ( showMarkerPreview === false && editor.selected === markerPreview ) {
+
+				editor.deselect();
+
+			}
+
+			signals.sceneGraphChanged.dispatch();
+
+		}
+
+	}
 
 	// helpers
 
@@ -467,12 +496,14 @@ function Viewport( editor ) {
 
 		container.dom.appendChild( renderer.domElement );
 
+		applyViewportMarkerPreview();
 		render();
 
 	} );
 
 	signals.sceneGraphChanged.add( function () {
 
+		applyViewportMarkerPreview();
 		render();
 
 	} );
@@ -749,6 +780,13 @@ function Viewport( editor ) {
 	signals.viewportLightingPreviewChanged.add( function () {
 
 		applyViewportLightingPreview();
+		render();
+
+	} );
+
+	signals.viewportMarkerPreviewChanged.add( function () {
+
+		applyViewportMarkerPreview();
 		render();
 
 	} );

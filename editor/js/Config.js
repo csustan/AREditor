@@ -31,6 +31,7 @@ function Config() {
 
 		'settings/history': false,
 		'settings/viewport/lightingPreview': 'off',
+		'settings/viewport/markerPreview': 'off',
 
 		'settings/shortcuts/translate': 'w',
 		'settings/shortcuts/rotate': 'e',

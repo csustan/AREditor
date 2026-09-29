@@ -227,6 +227,12 @@ function SidebarNFTMarkerGenerator(editor) {
 	header.dom.style.display = 'block'; // ensures the next text does not sit on the same line
 	content.add( header );
 
+	const publishButton = new UIButton( editor.strings.getKey( 'menubar/file/publish_arnft' ) );
+	publishButton.setWidth( '100%' );
+	publishButton.setMarginBottom( '12px' );
+	publishButton.onClick( () => editor.signals.publishARNFTApp.dispatch() );
+	content.add( publishButton );
+
 
 	// File input -----------------------------------------------------
 

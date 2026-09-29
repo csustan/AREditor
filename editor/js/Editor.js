@@ -40,6 +40,12 @@ function Editor() {
 		savingStarted: new Signal(),
 		savingFinished: new Signal(),
 
+		// publishing
+
+		publishARMarkerApp: new Signal(),
+		publishARNFTApp: new Signal(),
+		publishARQRCodeTrackerApp: new Signal(),
+
 		transformModeChanged: new Signal(),
 		snapChanged: new Signal(),
 		spaceChanged: new Signal(),

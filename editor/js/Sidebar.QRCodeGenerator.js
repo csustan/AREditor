@@ -240,6 +240,12 @@ function SidebarQRCodeGenerator( editor ) {
 	header.setMarginBottom( '12px' );
 	content.add( header );
 
+	const publishButton = new UIButton( editor.strings.getKey( 'menubar/file/publish_arqr' ) );
+	publishButton.setWidth( '100%' );
+	publishButton.setMarginBottom( '12px' );
+	publishButton.onClick( () => editor.signals.publishARQRCodeTrackerApp.dispatch() );
+	content.add( publishButton );
+
 	const generatedOutput = new UISpan();
 	generatedOutput.setDisplay( 'none' );
 	generatedOutput.setWidth( '100%' );

@@ -813,8 +813,9 @@ function MenubarFile(editor) {
 	option = new UIRow();
 	option.setClass('option');
 	option.setTextContent(strings.getKey('menubar/file/publish_ar'));
-	//option.onClick(function () {
-	option.onClick(async function () { //The use of the improved AR Marker generator requires await, which means the function needs to be an async
+
+	async function publishARMarkerApp() {
+
 		//Setup a storage location for the index.html and the json.app file content
 		const toZip = {};
 
@@ -1356,6 +1357,13 @@ function createZip(filesToFetch) {
 		// 	});
 
 
+	}
+
+	editor.signals.publishARMarkerApp.add(publishARMarkerApp);
+	option.onClick(function () {
+
+		editor.signals.publishARMarkerApp.dispatch();
+
 	});
 	options.add(option);
 //End Publish AR App
@@ -1372,7 +1380,8 @@ function createZip(filesToFetch) {
 option = new UIRow();
 option.setClass('option');
 option.setTextContent(strings.getKey('menubar/file/publish_arnft'));
-option.onClick(async function () {
+
+async function publishARNFTApp() {
 
 	//Setup a storage location for the index.html and the json.app file content
 	const toZipForARNFT = {};
@@ -1720,6 +1729,13 @@ option.onClick(async function () {
 				}
 
 		});
+}
+
+editor.signals.publishARNFTApp.add(publishARNFTApp);
+option.onClick(function () {
+
+	editor.signals.publishARNFTApp.dispatch();
+
 });
 
 options.add(option);
@@ -1730,7 +1746,8 @@ options.add(option);
 option = new UIRow();
 option.setClass('option');
 option.setTextContent(strings.getKey('menubar/file/publish_arqr'));
-option.onClick(async function () {
+
+async function publishARQRCodeTrackerApp() {
 
 	try {
 
@@ -1798,6 +1815,13 @@ option.onClick(async function () {
 		alert('The AR QR Code Tracker App could not be published.');
 
 	}
+
+}
+
+editor.signals.publishARQRCodeTrackerApp.add(publishARQRCodeTrackerApp);
+option.onClick(function () {
+
+	editor.signals.publishARQRCodeTrackerApp.dispatch();
 
 });
 options.add(option);

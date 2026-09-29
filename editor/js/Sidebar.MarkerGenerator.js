@@ -356,6 +356,12 @@ function SidebarMarkerGenerator(editor) {
   header.dom.style.display = 'block';
   content.add(header);
 
+  const publishButton = new UIButton(editor.strings.getKey('menubar/file/publish_ar'));
+  publishButton.setWidth('100%');
+  publishButton.setMarginBottom('12px');
+  publishButton.onClick(() => editor.signals.publishARMarkerApp.dispatch());
+  content.add(publishButton);
+
   const fileStatusText = new UIText('Using scene background.');
   fileStatusText.setColor('#888');
   fileStatusText.setMarginBottom('6px');

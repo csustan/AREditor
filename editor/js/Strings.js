@@ -65,6 +65,7 @@ function Strings( config ) {
 			'menubar/add/ambientlight': 'AmbientLight',
 			'menubar/add/perspectivecamera': 'PerspectiveCamera',
 			'menubar/add/orthographiccamera': 'OrthographicCamera',
+			'menubar/add-lighting': 'Add Lighting',
 
 			'menubar/status/autosave': 'autosave',
 

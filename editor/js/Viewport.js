@@ -874,7 +874,22 @@ function Viewport( editor ) {
 
 	signals.nftMarkerChanged.add( function () {
 
-		const markerPreview = scene.getObjectByName( NFT_MARKER_PREVIEW_NAME );
+		const markerPreviews = [];
+
+		scene.traverse( function ( object ) {
+
+			if ( object.name === NFT_MARKER_PREVIEW_NAME ) markerPreviews.push( object );
+
+		} );
+
+		const markerPreview = markerPreviews.shift();
+
+		for ( const duplicateMarkerPreview of markerPreviews ) {
+
+			if ( editor.selected === duplicateMarkerPreview ) editor.deselect();
+			editor.removeObject( duplicateMarkerPreview );
+
+		}
 
 		if ( markerPreview !== undefined ) {
 

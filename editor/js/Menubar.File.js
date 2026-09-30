@@ -772,7 +772,7 @@ function MenubarFile(editor) {
 	
 		//
 	
-		options.add( new UIHorizontalRule() );
+		// options.add( new UIHorizontalRule() ); //Disable from the File Menu -- moving Publish to the appropeate tab
 		//*/ //End diabling of file menu options
 
 //Start Publish AR App
@@ -1332,7 +1332,8 @@ function createZip(filesToFetch) {
 		editor.signals.publishARMarkerApp.dispatch();
 
 	});
-	options.add(option);
+	// options.add(option);   //Disable from the File Menu -- moving Publish to the appropeate tab
+
 //End Publish AR App
 
 	/////////////---------------------------------------//////////////
@@ -1705,7 +1706,7 @@ option.onClick(function () {
 
 });
 
-options.add(option);
+// options.add(option);  //Disable from the File Menu -- moving Publish to the appropeate tab
 
 //End Publish AR NFT App
 
@@ -1791,7 +1792,7 @@ option.onClick(function () {
 	editor.signals.publishARQRCodeTrackerApp.dispatch();
 
 });
-options.add(option);
+// options.add(option);
 
 /////////////---------------------------------------//////////////
 /////////////---------------------------------------//////////////

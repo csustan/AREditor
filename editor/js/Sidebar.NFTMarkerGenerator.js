@@ -10,7 +10,7 @@ globalThis.Module.locateFile = ( path, prefix ) => {
 
 // start module imports: basics and the NFT marker creator ESM import
 
-import { UISpan, UIRow, UIText, UIButton, UIInput, UIHorizontalRule } from './libs/ui.js';
+import { UISpan, UIRow, UIText, UIButton, UIInput, UIHorizontalRule, UITabbedPanel } from './libs/ui.js';
 import nftMarkerCreator from './libs/nft/NftMarkerCreator_wasm.js';
 
 //import nftMarkerCreatorFactory from './libs/nft/NftMarkerCreator.min.js';
@@ -236,43 +236,70 @@ function SidebarNFTMarkerGenerator(editor) {
 
 	// File input -----------------------------------------------------
 
-	// Line 1: status text (above the chooser)
+	// Keep the packaged Pineball marker as the initial Active NFT until a custom
+	// marker has completed every generation step successfully.
+	const defaultNftMarkerPreviewUrl = new URL( '../files/ARNFTExportFiles/img/pinball.jpg', import.meta.url ).toString();
+
+	// Explain why choosing a new image does not immediately replace the marker used
+	// by the viewport, downloads, and publishing.
+	const imageTabsHeader = new UIRow();
+	imageTabsHeader.dom.style.display = 'flex';
+	imageTabsHeader.dom.style.alignItems = 'center';
+	imageTabsHeader.dom.style.gap = '6px';
+	imageTabsHeader.setMarginBottom( '6px' );
+	imageTabsHeader.add( new UIText( 'NFT Images' ) );
+	imageTabsHeader.dom.appendChild( makeInfoButton(
+		'Active NFT is used by the viewport, downloads, and exports. Pending Image is awaiting processing and becomes active only after successful generation. Cancel discards the pending image.'
+	) );
+	content.add( imageTabsHeader );
+
+	const imageTabs = new UITabbedPanel();
+	imageTabs.dom.style.minWidth = '0';
+	imageTabs.dom.style.marginBottom = '8px';
+
+	// Active NFT tab -------------------------------------------------
+	// This image and name describe the dataset currently used outside the generator.
+	const activeImagePanel = new UISpan();
+	activeImagePanel.dom.style.display = 'block';
+	activeImagePanel.dom.style.padding = '10px 0';
+
+	const activeImageNameText = new UIText( 'Default Pineball' );
+	activeImageNameText.setColor( '#888' );
+	activeImageNameText.setMarginBottom( '8px' );
+	activeImageNameText.dom.style.display = 'block';
+	activeImageNameText.dom.style.overflowWrap = 'anywhere';
+	activeImagePanel.add( activeImageNameText );
+
+	const activePreviewImg = document.createElement( 'img' );
+	activePreviewImg.alt = 'Active NFT marker image';
+	activePreviewImg.style.display = 'block';
+	activePreviewImg.style.maxWidth = '100%';
+	activePreviewImg.style.maxHeight = '180px';
+	activePreviewImg.style.margin = '0 auto';
+	activePreviewImg.style.objectFit = 'contain';
+	activeImagePanel.dom.appendChild( activePreviewImg );
+
+	function showDefaultNftMarkerPreview() {
+
+		activePreviewImg.src = defaultNftMarkerPreviewUrl;
+		activeImageNameText.setValue( 'Default Pineball' );
+
+	}
+
+	showDefaultNftMarkerPreview();
+
+	// Pending Image tab ----------------------------------------------
+	// A selected file is staged here without changing the Active NFT.
+	const pendingImagePanel = new UISpan();
+	pendingImagePanel.dom.style.display = 'block';
+	pendingImagePanel.dom.style.padding = '10px 0';
+
 	const fileStatusText = new UIText( 'No image loaded.' );
 	fileStatusText.setColor( '#888' );
 	fileStatusText.setMarginBottom( '6px' );
 	fileStatusText.dom.style.display = 'block';
-	content.add( fileStatusText );
+	pendingImagePanel.add( fileStatusText );
 
-	// preview image to be shown above the Choose File button
-	const previewImg = document.createElement('img');
-	previewImg.style.maxWidth = '100%';
-	previewImg.style.display = 'none';
-	previewImg.style.marginBottom = '8px'; // space before the button
-	// Keep the built-in pinball marker as a local fallback so the panel has a valid preview
-	// even before the user uploads or generates a custom NFT marker.
-	const defaultNftMarkerPreviewUrl = new URL( '../files/ARNFTExportFiles/img/pinball.jpg', import.meta.url ).toString();
-
-	function showDefaultNftMarkerPreview() {
-		previewImg.src = defaultNftMarkerPreviewUrl;
-		previewImg.style.display = 'block';
-	}
-	// don't run fileSection.dom.appendChild(previewImg); here, run it after
-	//the fileSection has been created
-	// end preview image
-
-
-	// Line 2: Image label, then a "Choose File" button row, then a filename row
-	const fileSection = new UISpan();
-	fileSection.dom.style.display = 'block';
-	fileSection.dom.style.marginBottom = '8px';
-
-	// "Image" label
-	const imageLabel = new UIText( 'Image' );
-	imageLabel.dom.style.display = 'block';
-	imageLabel.dom.style.marginBottom = '6px';
-	fileSection.add( imageLabel );
-
-	// Row: Choose File button
 	const chooseFileRow = new UIRow();
 	chooseFileRow.dom.style.display = 'flex';
 	chooseFileRow.dom.style.alignItems = 'center';
@@ -294,21 +321,40 @@ function SidebarNFTMarkerGenerator(editor) {
 
 	chooseFileRow.add( chooseFileBtn );
 	chooseFileRow.add( fileInput );
-	fileSection.add( chooseFileRow );
+	pendingImagePanel.add( chooseFileRow );
 
-	//add the preview image;
-	// this will be placed just after the label and before the Choose File row
-	fileSection.dom.insertBefore(previewImg, chooseFileRow.dom);
-	showDefaultNftMarkerPreview();
-
-
-	// Row: filename text (second line)
 	const chosenFileNameText = new UIText( 'No file chosen' );
 	chosenFileNameText.setColor( '#888' );
+	chosenFileNameText.setMarginBottom( '8px' );
 	chosenFileNameText.dom.style.display = 'block';
-	fileSection.add( chosenFileNameText );
+	chosenFileNameText.dom.style.overflowWrap = 'anywhere';
+	pendingImagePanel.add( chosenFileNameText );
 
-	content.add( fileSection );
+	// Keep generation controls directly beneath the chooser and selected filename
+	// so it is clear which pending image will be processed.
+	const generateBtn = new UIButton( 'Generate NFT Marker' );
+	generateBtn.setMarginBottom( '6px' );
+	pendingImagePanel.add( generateBtn );
+
+	const cancelBtn = new UIButton( 'Cancel' );
+	cancelBtn.setMarginBottom( '10px' );
+	pendingImagePanel.add( cancelBtn );
+
+	const pendingPreviewImg = document.createElement( 'img' );
+	pendingPreviewImg.alt = 'Pending NFT marker image';
+	pendingPreviewImg.style.display = 'none';
+	pendingPreviewImg.style.maxWidth = '100%';
+	pendingPreviewImg.style.maxHeight = '180px';
+	pendingPreviewImg.style.margin = '0 auto';
+	pendingPreviewImg.style.objectFit = 'contain';
+	pendingImagePanel.dom.appendChild( pendingPreviewImg );
+
+	// addTab() selects each tab as it is registered, so explicitly return to Active
+	// after both panels have been added for the initial view.
+	imageTabs.addTab( 'nft-active-image', 'Active NFT', activeImagePanel );
+	imageTabs.addTab( 'nft-pending-image', 'Pending Image', pendingImagePanel );
+	imageTabs.select( 'nft-active-image' );
+	content.add( imageTabs );
 
 	// End File input -----------------------------------------------------
 
@@ -320,11 +366,6 @@ function SidebarNFTMarkerGenerator(editor) {
 	statusText.setMarginBottom( '8px' );
 	statusText.dom.style.display = 'block'; // prevents joining with other inline elements
 	content.add( statusText );
-
-	//Download Button show Generate button directly under the main status text
-	const generateBtn = new UIButton( 'Generate NFT Marker' );
-	generateBtn.setMarginBottom( '10px' );
-	content.add( generateBtn );
 
 	const resetToDefaultNftMakerBtn = new UIButton( 'Reset to Default NFT Maker' );
 	resetToDefaultNftMakerBtn.setMarginBottom( '10px' );
@@ -341,8 +382,9 @@ function SidebarNFTMarkerGenerator(editor) {
 		generateBtn.dom.style.opacity = enabled ? '1' : '0.5';
 		generateBtn.dom.style.pointerEvents = enabled ? 'auto' : 'none';
 
-		// Tooltip hint (optional)
-		generateBtn.dom.title = enabled ? 'Generate NFT marker files' : 'Generation is running...';
+		generateBtn.dom.title = enabled
+			? 'Generate NFT marker files'
+			: ( isGenerating ? 'Generation is running...' : 'Choose an image to generate an NFT marker' );
 	}
 	//End Generate Button Helper
 
@@ -438,12 +480,8 @@ function SidebarNFTMarkerGenerator(editor) {
 	downloadSourceText.setMarginBottom( '8px' );
 	downloadSourceText.dom.style.display = 'block';
 
-	const cancelBtn = new UIButton( 'Cancel' );
-	cancelBtn.setMarginBottom( '10px' );
-
 	content.add( downloadBtn );
 	content.add( downloadSourceText );
-	content.add( cancelBtn );
 	// end button creation
 
 	content.add(new UIHorizontalRule());
@@ -680,7 +718,6 @@ function SidebarNFTMarkerGenerator(editor) {
 
 		//Button State flags
 		let generationStarted = false;         // true once "Generate" clicked
-		let previousPreviewSrc = null;         // to restore when Cancel used
 		let stagedPreviousSnapshot = null; // what Cancel restores while a new upload is staged
 		let isGenerating = false; // Prevent double-click generation runs
 
@@ -709,14 +746,8 @@ function SidebarNFTMarkerGenerator(editor) {
 
 		function refreshDownloadUiState() {
 
-			// Download is always available after generation finishes:
-			// use generated files when present, otherwise fall back to the default packaged dataset.
-			if ( isGenerating ) {
-				setDownloadButtonState( false );
-				downloadSourceText.setValue( 'Download source: Generating marker files (disabled)' );
-				return;
-			}
-
+			// Download always uses Active NFT data, including while a Pending Image is
+			// staged or generating. Fall back to the packaged dataset when no custom trio exists.
 			if ( hasGeneratedNftOutput() ) {
 				setDownloadButtonState( true );
 				downloadSourceText.setValue( 'Download source: Generated NFT files' );
@@ -732,91 +763,21 @@ function SidebarNFTMarkerGenerator(editor) {
 		//As well as its visual stylings
 		cancelBtn.onClick(() => {
 
-		// If we have a staged snapshot (state before the user selected the new image), restore it
-		if ( stagedPreviousSnapshot ) {
+			// Restore the snapshot captured before this upload, then discard only the
+			// Pending Image. The current Active NFT remains the source of truth.
+			if ( stagedPreviousSnapshot ) {
 
-			// Restore staged snapshot (pre-upload state)
-			applySnapshotToWindow( stagedPreviousSnapshot );
+				applySnapshotToWindow( stagedPreviousSnapshot );
+				showActiveNftSnapshot( stagedPreviousSnapshot );
 
-			if ( stagedPreviousSnapshot.previewUrl ) {
-				previewObjectURL = stagedPreviousSnapshot.previewUrl;
-				previewImg.src = previewObjectURL;
-				previewImg.style.display = 'block';
-			} else if ( previousPreviewSrc ) {
-				previewImg.src = previousPreviewSrc;
-				previewImg.style.display = 'block';
-			} else {
-				previewImg.src = '';
-				previewImg.style.display = 'none';
 			}
 
-		} else if ( lastGoodIset && lastGoodFset && lastGoodFset3 ) {
-
-			// NEW: Restore last successful generation
-			window.NFT_Iset  = lastGoodIset;
-			window.NFT_Fset  = lastGoodFset;
-			window.NFT_Fset3 = lastGoodFset3;
-			window.NFT_Zft = lastGoodZft; // Restore the optional zft file if it existed for the last successful generation.
-			// Keep download naming in sync with the restored files:
-			window.NFT_ImageBlob = lastGoodImageBlob; // Even though lastGoodOutputName is already used by downloadBtn.
-			window.NFT_Dpi = lastGoodDpi;
-			editor.signals.nftMarkerChanged.dispatch();
-
-			// Restore preview from last good generation
-			if ( lastGoodPreviewObjectURL ) {
-				previewObjectURL = lastGoodPreviewObjectURL;
-				previewImg.src = previewObjectURL;
-				previewImg.style.display = 'block';
-			} else {
-				previewImg.src = '';
-				previewImg.style.display = 'none';
-			}
-
-			// Download should be enabled again
+			clearPendingNftImage();
+			stagedPreviousSnapshot = null;
+			generationStarted = false;
+			statusText.setValue( 'Pending image discarded. Active NFT was not changed.' );
+			imageTabs.select( 'nft-active-image' );
 			refreshDownloadUiState();
-
-		} else {
-
-			// No previous state at all — clear everything
-			window.NFT_Iset = null;
-			window.NFT_Fset = null;
-			window.NFT_Fset3 = null;
-			window.NFT_Zft = null;
-			window.NFT_ImageBlob = null;
-			window.NFT_Dpi = null;
-			editor.signals.nftMarkerChanged.dispatch();
-
-			refreshDownloadUiState();
-			showDefaultNftMarkerPreview();
-		}
-
-
-		// Clear staged upload (go back to previous)
-		loadedImage = null;
-		loadedImageFileName = null;
-
-		// The user canceled this upload, so release the uploaded image blob URL.
-		if ( uploadedImageObjectURL ) {
-			URL.revokeObjectURL( uploadedImageObjectURL );
-			uploadedImageObjectURL = null;
-		}
-
-		try { fileInput.dom.value = ''; } catch (e) {}
-
-		// Hide generate/cancel
-		setGenerateButtonState( false );
-		setButtonVisibility(cancelBtn, false);
-
-		// Clear staged snapshot so repeated cancel doesn't do weird things
-		stagedPreviousSnapshot = null;
-
-		fileStatusText.setValue('No image loaded.');
-		chosenFileNameText.setValue( 'No file chosen' );
-		chosenFileNameText.setColor( '#888' );
-
-		statusText.setValue('Upload canceled.');
-		generationStarted = false;
-		refreshDownloadUiState();
 
 	});
 
@@ -907,15 +868,8 @@ function SidebarNFTMarkerGenerator(editor) {
 		
 
 
-	// Preview <img> ----------------------------------------------------
-	// moved to the top of the controls
-	//const previewImg = document.createElement('img');
-	//previewImg.style.maxWidth = '100%';
-	//previewImg.style.display = 'none';
-	//previewImg.style.marginTop = '10px';
-	//container.dom.appendChild(previewImg);
-
-	// Internal state
+	// Active and Pending image state ---------------------------------
+	// loadedImage belongs to Pending; previewObjectURL belongs to Active.
 	let loadedImage = null;
 	let loadedImageFileName = null;
 	let previewObjectURL = null;
@@ -931,6 +885,67 @@ function SidebarNFTMarkerGenerator(editor) {
 	let lastGoodZft = null;
 	let lastGoodPreviewObjectURL = null;
 	let lastGoodOutputName = null; // keeps downloads in sync with the last-good generated files
+
+	// Capture all values that define the Active NFT so Cancel and generation errors
+	// can restore one coherent marker set rather than mixing files from two runs.
+	function captureActiveNftSnapshot() {
+
+		return {
+			iset: window.NFT_Iset,
+			fset: window.NFT_Fset,
+			fset3: window.NFT_Fset3,
+			zft: window.NFT_Zft,
+			imageBlob: window.NFT_ImageBlob,
+			dpi: window.NFT_Dpi,
+			previewUrl: previewObjectURL,
+			outputName: lastGoodOutputName
+		};
+
+	}
+
+	// Keep the Active tab's image and displayed name synchronized with its restored data.
+	function showActiveNftSnapshot( snapshot ) {
+
+		if ( snapshot && snapshot.previewUrl ) {
+
+			previewObjectURL = snapshot.previewUrl;
+			activePreviewImg.src = previewObjectURL;
+			activeImageNameText.setValue( snapshot.outputName || 'Generated NFT' );
+
+		} else {
+
+			showDefaultNftMarkerPreview();
+
+		}
+
+	}
+
+	// Release only Pending resources. Active object URLs and generated globals must
+	// remain valid until a later generation is promoted successfully or Reset is used.
+	function clearPendingNftImage() {
+
+		loadedImage = null;
+		loadedImageFileName = null;
+
+		if ( uploadedImageObjectURL ) {
+
+			URL.revokeObjectURL( uploadedImageObjectURL );
+			uploadedImageObjectURL = null;
+
+		}
+
+		try { fileInput.dom.value = ''; } catch ( error ) {}
+
+		pendingPreviewImg.removeAttribute( 'src' );
+		pendingPreviewImg.style.display = 'none';
+		fileStatusText.setValue( 'No image loaded.' );
+		chosenFileNameText.setValue( 'No file chosen' );
+		chosenFileNameText.setColor( '#888' );
+		setGenerateButtonState( false );
+		setButtonVisibility( generateBtn, false );
+		setButtonVisibility( cancelBtn, false );
+
+	}
 
 	function resetToDefaultNftMaker() {
 
@@ -975,30 +990,15 @@ function SidebarNFTMarkerGenerator(editor) {
 			lastGoodPreviewObjectURL = null;
 		}
 
-		if ( uploadedImageObjectURL ) {
-			URL.revokeObjectURL( uploadedImageObjectURL );
-			uploadedImageObjectURL = null;
-		}
-
-		loadedImage = null;
-		loadedImageFileName = null;
+		clearPendingNftImage();
 		generationStarted = false;
 		stagedPreviousSnapshot = null;
-		previousPreviewSrc = null;
-
-		try { fileInput.dom.value = ''; } catch ( e ) {}
 
 		showDefaultNftMarkerPreview();
-
-		fileStatusText.setValue( 'No image loaded.' );
-		chosenFileNameText.setValue( 'No file chosen' );
-		chosenFileNameText.setColor( '#888' );
+		imageTabs.select( 'nft-active-image' );
 
 		statusText.setValue( 'Reset to default NFT marker. Export now uses the built-in default until a new marker is generated.' );
 
-		setGenerateButtonState( false );
-		setButtonVisibility( generateBtn, false );
-		setButtonVisibility( cancelBtn, false );
 		refreshDownloadUiState();
 
 		alert( 'NFT marker reset to default.' );
@@ -1039,33 +1039,22 @@ function SidebarNFTMarkerGenerator(editor) {
 		chosenFileNameText.setColor( '#bbb' );
 
 		statusText.setValue( 'Ready to generate.' );        // optional, keeps the main status sane
-		previousPreviewSrc = previewImg.src || null; // remember whatever the user was seeing before this upload
-		previewImg.src = loadedImage.src;
-		previewImg.style.display = 'block';
+		// Show the upload only in Pending. Active remains unchanged until generation succeeds.
+		pendingPreviewImg.src = loadedImage.src;
+		pendingPreviewImg.style.display = 'block';
+		imageTabs.select( 'nft-pending-image' );
 
 		// Capture the current exported/downloadable NFT state before this upload stages a new image.
 		// Cancel uses this to restore whichever marker set was active before the user picked a replacement.
-		const previousSnapshot = {
-			iset: window.NFT_Iset,
-			fset: window.NFT_Fset,
-			fset3: window.NFT_Fset3,
-			zft: window.NFT_Zft,
-			imageBlob: window.NFT_ImageBlob,
-			dpi: window.NFT_Dpi,
-			previewUrl: previewObjectURL // may be null if we’re just showing an uploaded image
-		};
-
-		// IMPORTANT: assign to the OUTER variable (do not redeclare with "let")
-		stagedPreviousSnapshot = previousSnapshot;
+		stagedPreviousSnapshot = captureActiveNftSnapshot();
 
 		// We have an uploaded image: show Generate, and show Cancel (since generation not started yet)
 		generationStarted = false;
+		setGenerateButtonState( true );
 		setButtonVisibility(generateBtn, true);
 		setButtonVisibility(cancelBtn, true);
 
-		// Download remains enabled if a trio exists from last successful run
-		//setDownloadButtonState( hasNftTrio( window.NFT_Iset, window.NFT_Fset, window.NFT_Fset3 ) );
-		setDownloadButtonState( hasDownloadableNftOutput() );
+		refreshDownloadUiState();
 
 		// Store it so Cancel can restore (even if user hasn’t generated anything new yet)
 		// If there's no trio, snapshot still matters because preview might exist.
@@ -1080,46 +1069,20 @@ function SidebarNFTMarkerGenerator(editor) {
 
 	generateBtn.onClick(async () => {
 
+		if ( !loadedImage || isGenerating ) return;
+
 		generationStarted = true;
 		setButtonVisibility(cancelBtn, false);
-
-		// Prevent double-click from starting a second generation run
-		if ( isGenerating ) {
-			return;
-		}
 		isGenerating = true;
 		refreshDownloadUiState();
 
-
-		// Snapshot the active globals again right before generation starts so a failed generation run
-		// can roll the app back to a known-good downloadable/exportable state.
-		const rollbackSnapshot = {
-			iset: window.NFT_Iset,
-			fset: window.NFT_Fset,
-			fset3: window.NFT_Fset3,
-			zft: window.NFT_Zft,
-			imageBlob: window.NFT_ImageBlob,
-			dpi: window.NFT_Dpi,
-			previewUrl: previewObjectURL
-		};
-
-		setDownloadButtonState( false ); // generation in progress; prevent downloading partial/stale data
-		//setDownloadButtonState( false ); //downloadBtn.setDisabled(true); //make sure that the files can't be downloaded until the generation is complete.
-		
-
-		// Clear previous generated globals before starting work so publish/download code can never
-		// accidentally mix old NFT data with a partially generated new run.
-		window.NFT_Iset = null;
-		window.NFT_Fset = null;
-		window.NFT_Fset3 = null;
-		window.NFT_Zft = null;
-		window.NFT_ImageBlob = null;
-		window.NFT_Dpi = null;
-
-		if ( !loadedImage ) {
-			statusText.setValue('Please load an image first.');
-			return;
-		}
+		// Generated files stay local throughout processing. The window globals continue
+		// to expose the previous Active NFT until the complete result is ready to promote.
+		const rollbackSnapshot = captureActiveNftSnapshot();
+		let generatedIset = null;
+		let generatedFset = null;
+		let generatedFset3 = null;
+		let generatedZft = null;
 
 		statusText.setValue('Generating NFT marker… This can take up to ten minutes');
 		setGenerationIndicatorVisible( true ); //Spinner on
@@ -1368,14 +1331,14 @@ function SidebarNFTMarkerGenerator(editor) {
 						throw new Error('[NFT] Generated files not found in module FS (look above for listings).');
 					}
 
-					// Promote the generated buffers to the global handoff points used by publish/download.
-					window.NFT_Iset  = foundIset;
-					window.NFT_Fset  = foundFset;
-					window.NFT_Fset3 = foundFset3;
+					// Stage the required trio locally instead of publishing a partial result through
+					// the globals consumed by download, viewport, and export code.
+					generatedIset = foundIset;
+					generatedFset = foundFset;
+					generatedFset3 = foundFset3;
 
 					// The optional .zft file only exists when the user asked for it, so treat it as
 					// a best-effort companion file rather than part of the required trio.
-					window.NFT_Zft = null;
 
 					if ( options.zft ) {
 
@@ -1392,7 +1355,7 @@ function SidebarNFTMarkerGenerator(editor) {
 							const zftFile = tryRead( candidatePath );
 
 							if ( zftFile ) {
-								window.NFT_Zft = zftFile;
+								generatedZft = zftFile;
 								break;
 							}
 
@@ -1403,13 +1366,13 @@ function SidebarNFTMarkerGenerator(editor) {
 					// === DEBUG: Verify dataset integrity ===
 					console.log("=== NFT DATASET DEBUG ===");
 
-					console.log("Iset instanceof Uint8Array:", window.NFT_Iset instanceof Uint8Array);
-					console.log("Fset instanceof Uint8Array:", window.NFT_Fset instanceof Uint8Array);
-					console.log("Fset3 instanceof Uint8Array:", window.NFT_Fset3 instanceof Uint8Array);
+					console.log("Iset instanceof Uint8Array:", generatedIset instanceof Uint8Array);
+					console.log("Fset instanceof Uint8Array:", generatedFset instanceof Uint8Array);
+					console.log("Fset3 instanceof Uint8Array:", generatedFset3 instanceof Uint8Array);
 
-					console.log("Iset length:", window.NFT_Iset?.length);
-					console.log("Fset length:", window.NFT_Fset?.length);
-					console.log("Fset3 length:", window.NFT_Fset3?.length);
+					console.log("Iset length:", generatedIset?.length);
+					console.log("Fset length:", generatedFset?.length);
+					console.log("Fset3 length:", generatedFset3?.length);
 
 					try {
 						const statIset = module.FS.stat(`${outputBasePath}.iset`);
@@ -1430,16 +1393,6 @@ function SidebarNFTMarkerGenerator(editor) {
 					console.error('[NFT] Read/locate block error:', error);
 					throw error;
 				}
-
-
-
-				// Optional: generate the zft file as a second pass so we keep the trio as well.
-				window.NFT_Zft = null;
-
-				
-
-
-
 			} finally {
 
 				if ( paramPtr !== null ) module._free( paramPtr );
@@ -1461,9 +1414,7 @@ function SidebarNFTMarkerGenerator(editor) {
 			const ctx = canvas.getContext('2d');
 			ctx.putImageData( imgData, 0, 0 );
 
-			//window.NFT_ImageBlob = await new Promise( ( resolve ) => canvas.toBlob( resolve, 'image/png' ) );
-			//Handle Nulls
-			window.NFT_ImageBlob = await new Promise( ( resolve, reject ) => {
+			const generatedImageBlob = await new Promise( ( resolve, reject ) => {
 				canvas.toBlob( ( blob ) => {
 					if ( blob ) resolve( blob );
 					else reject( new Error( '[NFT] canvas.toBlob returned null.' ) );
@@ -1473,94 +1424,73 @@ function SidebarNFTMarkerGenerator(editor) {
 			//=======================================
 			//End the Run WASM Generator section
 			//=======================================
-			
-			// Update preview image and avoid memory leaks
+
+			// Promotion boundary: every required dataset file and the PNG preview now exist.
+			// Assign the full result together so all consumers switch to the same marker run.
+			window.NFT_Iset = generatedIset;
+			window.NFT_Fset = generatedFset;
+			window.NFT_Fset3 = generatedFset3;
+			window.NFT_Zft = generatedZft;
+			window.NFT_ImageBlob = generatedImageBlob;
+			window.NFT_Dpi = options.dpi;
+
 			if ( previewObjectURL ) {
 				URL.revokeObjectURL( previewObjectURL );
 			}
 
-			previewObjectURL = URL.createObjectURL( window.NFT_ImageBlob );
-			previewImg.src = previewObjectURL;
-			previewImg.style.display = 'block';
+			// Update the Active tab only after the generated globals have been promoted.
+			previewObjectURL = URL.createObjectURL( generatedImageBlob );
+			activePreviewImg.src = previewObjectURL;
+			activeImageNameText.setValue( outputName );
 
 			// Persist this successful run as the new "last good" state. Later uploads can be canceled
 			// back to this marker set, and download/export should continue to use it until replaced.
-			lastGoodIset = window.NFT_Iset;
-			lastGoodFset = window.NFT_Fset;
-			lastGoodFset3 = window.NFT_Fset3;
-			lastGoodZft = window.NFT_Zft;
-			lastGoodImageBlob = window.NFT_ImageBlob;
-			window.NFT_Dpi = options.dpi;
-			lastGoodDpi = window.NFT_Dpi;
+			lastGoodIset = generatedIset;
+			lastGoodFset = generatedFset;
+			lastGoodFset3 = generatedFset3;
+			lastGoodZft = generatedZft;
+			lastGoodImageBlob = generatedImageBlob;
+			lastGoodDpi = options.dpi;
 			lastGoodOutputName = outputName;
 			editor.signals.nftMarkerChanged.dispatch();
 
-			// Also preserve the preview URL we just created
-			if ( lastGoodPreviewObjectURL ) {
-				URL.revokeObjectURL( lastGoodPreviewObjectURL );
-			}
 			lastGoodPreviewObjectURL = previewObjectURL;
 
 			//Status Text's Success Message:
-			statusText.setValue(
-			"NFT Marker Generation Successful." +
-			"Exporting the AR Natural Feature" + 
-			"Tracker App will now use these NFT" + 
-			"Files. You can also save the new NFT" +
-			"Marker Files via the Download button." +
-			"You can adjust the settings and "  +
-			"generate a new marker set at anytime."
-			);
+			statusText.setValue( 'NFT marker generated successfully. It is now the active marker for the viewport, downloads, and exports.' );
 
 
 			setGenerationIndicatorVisible( false ); //Spinner off
 			
 			generationStarted = false;
-			refreshDownloadUiState();
-			// Allow the user to regenerate with updated settings without re-uploading the image.
-			setButtonVisibility( generateBtn, true );
-
-			// Once the marker generation succeeds, "Cancel" isn't needed (unless a new upload is staged).
-			setButtonVisibility( cancelBtn, false );
-
-			// Once generation succeeds, the staged pre-upload state is no longer the active source of truth.
-			// Future Cancel actions should refer to the next upload, not this completed run.
 			stagedPreviousSnapshot = null;
+			// The processed image is no longer pending; return the user to its Active preview.
+			clearPendingNftImage();
+			imageTabs.select( 'nft-active-image' );
 
 			
 		} catch (err) {
 
 			console.error(err);
-			statusText.setValue('Error: see console.');
+			statusText.setValue( 'Generation failed. The active NFT was preserved and the pending image is available to retry.' );
 
 			setGenerationIndicatorVisible( false ); //Errored out -- turn spinner off.
 
 			//Disable the download button so the user doesn't download broken files:
 			//setDownloadButtonState( false ); //downloadBtn.setDisabled(true); //replaced by relaoding hte snapshot
 			// A failed generation should not leave the editor in a half-generated state.
-			// Restore the snapshot from before this run so publish/download continue to work.
+			// Restore the snapshot from before this run, keep Pending available for retry,
+			// and leave publish/download connected to the previous Active NFT.
 			if ( rollbackSnapshot ) {
 				applySnapshotToWindow( rollbackSnapshot );
-
-				if ( rollbackSnapshot.previewUrl ) {
-					previewObjectURL = rollbackSnapshot.previewUrl;
-					previewImg.src = previewObjectURL;
-					previewImg.style.display = 'block';
-				}
-
-				// Keep download naming in sync with restored "last good" files
-				if ( lastGoodOutputName ) {
-					// nothing else needed here as downloadBtn uses lastGoodOutputName
-				}
+				showActiveNftSnapshot( rollbackSnapshot );
 
 			}
 
-			setButtonVisibility(generateBtn, !!loadedImage);
-
-			// If there's still a staged upload and generation is no longer running, allow Cancel.
-			setButtonVisibility(cancelBtn, !!loadedImage && stagedPreviousSnapshot !== null && generationStarted === false);
-
 			generationStarted = false;
+			setButtonVisibility( generateBtn, !!loadedImage );
+			setButtonVisibility( cancelBtn, !!loadedImage && stagedPreviousSnapshot !== null );
+			imageTabs.select( 'nft-pending-image' );
 
 		} finally {
 

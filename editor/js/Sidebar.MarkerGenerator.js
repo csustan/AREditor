@@ -1,7 +1,11 @@
 import {
   UISpan, UIText, UIInput, UISelect, UICheckbox, UINumber, UIButton, UIRow, UIHorizontalRule
 } from './libs/ui.js';
-import { AR_MARKER_PREVIEW_NAME } from './ARMarkerPreview.js';
+import {
+  getMarkerSystemState,
+  registerMarkerSystem,
+  setMarkerSystemState
+} from './MarkerSystemRegistry.js';
 
 //This will generate a Canvas Element that will work as a fall back wor whn the images won't load.
 //It's returned as a URL to be compatible with the rest of the code.
@@ -72,8 +76,39 @@ let sharedMarkerPattern = null;
 let sharedMarkerImageDataURL = null;
 
 // Export state accessors globally
-window.getSharedMarkerPattern = () => sharedMarkerPattern;
-window.getSharedMarkerImageDataURL = () => sharedMarkerImageDataURL;
+window.getSharedMarkerPattern = () => getMarkerSystemState('ar')?.pattern ?? sharedMarkerPattern;
+window.getSharedMarkerImageDataURL = () => getMarkerSystemState('ar')?.imageDataURL ?? sharedMarkerImageDataURL;
+
+registerMarkerSystem({
+  id: 'ar',
+  stateVersion: 1,
+  validateState: (state) => typeof state?.imageDataURL === 'string' &&
+    state.imageDataURL.startsWith('data:image/') &&
+    typeof state?.pattern === 'string' && state.pattern !== '',
+  applyState: (state) => {
+    innerImageURL = state?.sourceImageDataURL ?? null;
+    fullMarkerURL = state?.imageDataURL ?? null;
+    imageName = state?.imageName ?? null;
+    selectedColor = state?.selectedColor ?? 'black';
+    sharedMarkerPattern = state?.pattern ?? null;
+    sharedMarkerImageDataURL = state?.imageDataURL ?? null;
+  }
+});
+
+function commitARMarkerState() {
+  if (!fullMarkerURL || !sharedMarkerPattern) return;
+
+  setMarkerSystemState('ar', {
+    imageDataURL: fullMarkerURL,
+    pattern: sharedMarkerPattern,
+    sourceImageDataURL: innerImageURL,
+    imageName,
+    selectedColor,
+    patternRatio: window._markerPatternRatio?.getValue?.() ?? 0.5,
+    imageSize: window._markerImageSize?.getValue?.() ?? 512
+  });
+  window._editor?.signals.markerStateChanged.dispatch('ar');
+}
 
 //Update the marker generator preview image whenever a new marker image is generated.
 function updateMarkerPreviewImage(markerUrl) {
@@ -87,29 +122,12 @@ function updateMarkerPreviewImage(markerUrl) {
   });
 }
 
-//If the default template marker plane exists in the scene, update its material to match the current generated marker image.
-function syncDefaultMarkerPlaneTexture(markerUrl) {
-  const editor = window._editor;
-  const markerPlane = editor?.scene?.getObjectByName?.(AR_MARKER_PREVIEW_NAME); //Look for the default marker plane in the current editor scene.
-
-  if (!markerPlane || !markerPlane.material) return; //Stop here if the default marker plane is not present or does not have a material yet.
-
-  const textureLoader = new window.THREE.TextureLoader(); //Create a texture loader so the generated marker image can be loaded into the plane material.
-  textureLoader.load(markerUrl, (texture) => { //Load the current generated marker image from its URL.
-    markerPlane.material.map = texture; //Assign the loaded texture to the default marker plane material.
-    markerPlane.material.needsUpdate = true; //Flag the material so Three.js redraws it with the new texture.
-    editor.signals.objectChanged.dispatch(markerPlane); //Notify the editor that the marker plane object has changed.
-    editor.signals.materialChanged.dispatch(markerPlane.material); //Notify the editor that the marker plane material has changed.
-    editor.signals.sceneGraphChanged.dispatch(); //Refresh the scene graph so the editor UI stays in sync.
-  });
-}
-
 //Keep the generated marker image in one place so the preview image, shared export state, and default template plane all stay synchronized.
 function applyGeneratedMarkerImage(markerUrl) {
   fullMarkerURL = markerUrl;
   sharedMarkerImageDataURL = markerUrl;
   updateMarkerPreviewImage(markerUrl);
-  syncDefaultMarkerPlaneTexture(markerUrl);
+  commitARMarkerState();
 }
 
 // --- Global Generator Functions (used by Menubar.File.js) ---
@@ -137,6 +155,7 @@ function applyGeneratedMarkerImage(markerUrl) {
 
 	    THREEx.ArPatternFile.encodeImageURL(imageSource, (patternFileString) => {
 	      sharedMarkerPattern = patternFileString;
+        commitARMarkerState();
 	      console.log('[Generator] Marker pattern (no border) generated.');
 	      resolve();
 	    });
@@ -429,6 +448,7 @@ function SidebarMarkerGenerator(editor) {
     reader.onload = async (e) => {
       innerImageURL = e.target.result;
       fullMarkerURL = null; // force regenerate even if the same image -
+      sharedMarkerPattern = null;
       //- wihtout this, resetting the image then importing would cause the image preview not to refresh
       updateFullMarkerImage();
     
@@ -544,6 +564,7 @@ function SidebarMarkerGenerator(editor) {
     chosenFileNameText.setValue('Default marker');
     fileStatusText.setValue('Default marker image loaded.');
     fullMarkerURL = null; // Force regenerate on reset
+    sharedMarkerPattern = null;
     updateFullMarkerImage();
     await window.generateMarkerImage();
     await window.generateMarkerPattern();
@@ -699,6 +720,22 @@ function SidebarMarkerGenerator(editor) {
     });
   }
 
+  function syncActiveARMarkerState(markerSystemId) {
+    if (markerSystemId !== undefined && markerSystemId !== 'ar') return;
+
+    const state = getMarkerSystemState('ar');
+    if (!state) return;
+
+    patternRatio.setValue(state.patternRatio ?? 0.5);
+    imageSize.setValue(state.imageSize ?? 512);
+    colorDropdown.setValue(state.selectedColor ?? 'black');
+    chosenFileNameText.setValue(state.imageName || 'Restored marker');
+    fileStatusText.setValue('Restored active AR marker.');
+    updateMarkerPreviewImage(state.imageDataURL);
+  }
+
+  editor.signals.markerStateChanged.add(syncActiveARMarkerState);
+
   async function generatePDFLayout(countPerPage) {
     await window.generateMarkerImage();
 
@@ -724,7 +761,7 @@ function SidebarMarkerGenerator(editor) {
   innerImageURL = extractSceneBackgroundAsDataURL();
   imageName = 'scene-background';
   chosenFileNameText.setValue('Scene background');
-  updateFullMarkerImage();
+  syncActiveARMarkerState('ar');
 
   return container;
 }

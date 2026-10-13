@@ -1022,6 +1022,8 @@ class UIProgress extends UIElement {
 
 }
 
+let tabbedPanelCount = 0;
+
 class UITabbedPanel extends UIDiv {
 
 	constructor() {
@@ -1029,12 +1031,15 @@ class UITabbedPanel extends UIDiv {
 		super();
 
 		this.dom.className = 'TabbedPanel';
+		this.domIdPrefix = `ui-tabbed-panel-${ ++ tabbedPanelCount }`;
 
 		this.tabs = [];
 		this.panels = [];
 
 		this.tabsDiv = new UIDiv();
 		this.tabsDiv.setClass( 'Tabs' );
+		this.tabsDiv.dom.setAttribute( 'role', 'tablist' );
+		this.tabsDiv.dom.setAttribute( 'aria-orientation', 'horizontal' );
 
 		this.panelsDiv = new UIDiv();
 		this.panelsDiv.setClass( 'Panels' );
@@ -1057,24 +1062,27 @@ class UITabbedPanel extends UIDiv {
 
 			tab = this.tabs.find( function ( item ) {
 
-				return item.dom.id === scope.selected;
+				return item.tabId === scope.selected;
 
 			} );
 			panel = this.panels.find( function ( item ) {
 
-				return item.dom.id === scope.selected;
+				return item.tabId === scope.selected;
 
 			} );
 
 			if ( tab ) {
 
 				tab.removeClass( 'selected' );
+				tab.dom.setAttribute( 'aria-selected', 'false' );
+				tab.dom.tabIndex = - 1;
 
 			}
 
 			if ( panel ) {
 
 				panel.setDisplay( 'none' );
+				panel.dom.hidden = true;
 
 			}
 
@@ -1082,24 +1090,27 @@ class UITabbedPanel extends UIDiv {
 
 		tab = this.tabs.find( function ( item ) {
 
-			return item.dom.id === id;
+			return item.tabId === id;
 
 		} );
 		panel = this.panels.find( function ( item ) {
 
-			return item.dom.id === id;
+			return item.tabId === id;
 
 		} );
 
 		if ( tab ) {
 
 			tab.addClass( 'selected' );
+			tab.dom.setAttribute( 'aria-selected', 'true' );
+			tab.dom.tabIndex = 0;
 
 		}
 
 		if ( panel ) {
 
 			panel.setDisplay( '' );
+			panel.dom.hidden = false;
 
 		}
 
@@ -1112,14 +1123,26 @@ class UITabbedPanel extends UIDiv {
 	addTab( id, label, items ) {
 
 		const tab = new UITab( label, this );
-		tab.setId( id );
+		const tabIndex = this.tabs.length;
+		const tabDomId = `${ this.domIdPrefix }-tab-${ tabIndex }`;
+		const panelDomId = `${ this.domIdPrefix }-panel-${ tabIndex }`;
+		tab.tabId = id;
+		tab.dom.id = tabDomId;
+		tab.dom.setAttribute( 'role', 'tab' );
+		tab.dom.setAttribute( 'aria-controls', panelDomId );
+		tab.dom.setAttribute( 'aria-selected', 'false' );
+		tab.dom.tabIndex = - 1;
 		this.tabs.push( tab );
 		this.tabsDiv.add( tab );
 
 		const panel = new UIDiv();
-		panel.setId( id );
+		panel.tabId = id;
+		panel.dom.id = panelDomId;
+		panel.dom.setAttribute( 'role', 'tabpanel' );
+		panel.dom.setAttribute( 'aria-labelledby', tabDomId );
 		panel.add( items );
 		panel.setDisplay( 'none' );
+		panel.dom.hidden = true;
 		this.panels.push( panel );
 		this.panelsDiv.add( panel );
 
@@ -1143,7 +1166,50 @@ class UITab extends UIText {
 
 		this.dom.addEventListener( 'click', function () {
 
-			scope.parent.select( scope.dom.id );
+			scope.parent.select( scope.tabId );
+			scope.dom.focus();
+
+		} );
+
+		this.dom.addEventListener( 'keydown', function ( event ) {
+
+			const tabs = scope.parent.tabs;
+			const currentIndex = tabs.indexOf( scope );
+			let nextIndex = currentIndex;
+
+			switch ( event.key ) {
+
+				case 'ArrowLeft':
+					nextIndex = ( currentIndex - 1 + tabs.length ) % tabs.length;
+					break;
+
+				case 'ArrowRight':
+					nextIndex = ( currentIndex + 1 ) % tabs.length;
+					break;
+
+				case 'Home':
+					nextIndex = 0;
+					break;
+
+				case 'End':
+					nextIndex = tabs.length - 1;
+					break;
+
+				case 'Enter':
+				case ' ':
+					event.preventDefault();
+					scope.parent.select( scope.tabId );
+					return;
+
+				default:
+					return;
+
+			}
+
+			event.preventDefault();
+			const nextTab = tabs[ nextIndex ];
+			scope.parent.select( nextTab.tabId );
+			nextTab.dom.focus();
 
 		} );
 

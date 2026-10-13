@@ -158,7 +158,7 @@
 
 						timeout = setTimeout( function () {
 
-							editor.storage.set( editor.toJSON() );
+							editor.storage.set( editor.toJSON( { includeMarkerStates: true } ) );
 
 							editor.signals.savingFinished.dispatch();
 
@@ -175,6 +175,7 @@
 				signals.objectChanged.add( saveState );
 				signals.objectRemoved.add( saveState );
 				signals.materialChanged.add( saveState );
+				signals.markerStateChanged.add( saveState );
 				signals.sceneBackgroundChanged.add( saveState );
 				signals.sceneEnvironmentChanged.add( saveState );
 				signals.sceneFogChanged.add( saveState );

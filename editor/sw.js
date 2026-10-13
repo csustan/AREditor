@@ -130,6 +130,7 @@ const assets = [
 
 	'./js/ARMarkerPreview.js',
 	'./js/NFTMarkerPreview.js',
+	'./js/NFTMarkerExportSettings.js',
 	'./js/QRCodeMarkerPreview.js',
 	'./js/Editor.js',
 	'./js/Config.js',
@@ -267,12 +268,16 @@ async function networkFirst( request ) {
 	try {
 
 		let response = await fetch( request );
+		const requestUrl = new URL( request.url );
+		const isEditorDocument = requestUrl.pathname.endsWith( '/editor/' ) || requestUrl.pathname.endsWith( '/editor/index.html' );
+		const isWorker = request.destination === 'worker' || request.destination === 'sharedworker';
 
-		if ( request.url.endsWith( 'editor/' ) || request.url.endsWith( 'editor/index.html' ) ) { // copied from coi-serviceworker
+		if ( isEditorDocument || isWorker ) { // copied from coi-serviceworker
 
 			const newHeaders = new Headers( response.headers );
 			newHeaders.set( 'Cross-Origin-Embedder-Policy', 'require-corp' );
-			newHeaders.set( 'Cross-Origin-Opener-Policy', 'same-origin' );
+
+			if ( isEditorDocument ) newHeaders.set( 'Cross-Origin-Opener-Policy', 'same-origin' );
 
 			response = new Response( response.body, { status: response.status, statusText: response.statusText, headers: newHeaders } );
 

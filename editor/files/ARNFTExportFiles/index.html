@@ -26,9 +26,9 @@
             { name: 'generatedMarkerFile', markerUrl: "DataNFT/generatedMarkerFile" }
 
         ]
-        let width = 640;
-        let height = 480;
-        ARnft.ARnft.initWithEntities(width, height, entities,  'config-StanState.json', true)
+        let width = /* NFT_TRACKING_WIDTH */ 640;
+        let height = /* NFT_TRACKING_HEIGHT */ 480;
+        ARnft.ARnft.initWithEntities(width, height, entities,  'config-StanState.json', /* NFT_SHOW_STATS */ false)
             .then((nft) => {
                 
                 let testEntities = ARnft.ARnft.getEntities();

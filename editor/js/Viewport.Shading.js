@@ -1,4 +1,5 @@
 import { UIPanel, UISelect } from './libs/ui.js';
+import { getMarkerSystems } from './MarkerSystemRegistry.js';
 
 function ViewportShading( editor ) {
 
@@ -45,12 +46,15 @@ function ViewportShading( editor ) {
 	markerPreviewSelect.setRight( '350px' );
 	markerPreviewSelect.setTop( '10px' );
 	markerPreviewSelect.setWidth( '190px' );
-	markerPreviewSelect.setOptions( {
-		'off': 'Marker Preview Off',
-		'ar': 'AR Marker Preview',
-		'nft': 'NFT Marker Preview',
-		'qr': 'QR Marker Preview'
-	} );
+	const markerPreviewOptions = { 'off': 'Marker Preview Off' };
+
+	for ( const markerSystem of getMarkerSystems() ) {
+
+		markerPreviewOptions[ markerSystem.previewMode || markerSystem.id ] = markerSystem.label || markerSystem.id;
+
+	}
+
+	markerPreviewSelect.setOptions( markerPreviewOptions );
 	markerPreviewSelect.setValue( editor.viewportMarkerPreview );
 	markerPreviewSelect.onChange( function () {
 

@@ -6,6 +6,12 @@ import { History as _History } from './History.js';
 import { Strings } from './Strings.js';
 import { Storage as _Storage } from './Storage.js';
 import { Selector } from './Viewport.Selector.js';
+import {
+	cloneSceneWithoutMarkerPreviews,
+	createMarkerStateSnapshot,
+	removeMarkerPreviewsFromScene,
+	restoreMarkerStateSnapshot
+} from './MarkerSystemRegistry.js';
 //import { AddObjectCommand } from './commands/AddObjectCommand.js'; //this was needed before the default template was loaded in the Menubar.File.js
 
 var _DEFAULT_CAMERA = new THREE.PerspectiveCamera( 50, 1, 0.01, 1000 );
@@ -96,6 +102,7 @@ function Editor() {
 		viewportShadingChanged: new Signal(),
 		viewportLightingPreviewChanged: new Signal(),
 		viewportMarkerPreviewChanged: new Signal(),
+		markerStateChanged: new Signal(),
 		nftMarkerChanged: new Signal(),
 		qrCodeMarkerChanged: new Signal(),
 
@@ -145,6 +152,8 @@ function Editor() {
 Editor.prototype = {
 
 	setScene: function ( scene ) {
+
+		removeMarkerPreviewsFromScene( scene );
 
 		this.scene.uuid = scene.uuid;
 		this.scene.name = scene.name;
@@ -756,6 +765,8 @@ Editor.prototype = {
 		*/
 		
 
+		restoreMarkerStateSnapshot();
+		this.signals.markerStateChanged.dispatch();
 		this.deselect();
 
 		this.signals.editorCleared.dispatch();
@@ -768,6 +779,8 @@ Editor.prototype = {
 
 	fromJSON: async function ( json ) {
 
+		restoreMarkerStateSnapshot( json.markerStates );
+
 		var loader = new THREE.ObjectLoader();
 		var camera = await loader.parseAsync( json.camera );
 
@@ -778,6 +791,7 @@ Editor.prototype = {
 		this.scripts = json.scripts;
 
 		this.setScene( await loader.parseAsync( json.scene ) );
+		this.signals.markerStateChanged.dispatch();
 
 		if ( json.environment === 'ModelViewer' ) {
 
@@ -787,11 +801,12 @@ Editor.prototype = {
 
 	},
 
-	toJSON: function () {
+	toJSON: function ( options = {} ) {
 
 		// scripts clean up
 
 		var scene = this.scene;
+		var serializedScene = cloneSceneWithoutMarkerPreviews( scene );
 		var scripts = this.scripts;
 
 		for ( var key in scripts ) {
@@ -819,7 +834,7 @@ Editor.prototype = {
 		//Test Code:
 		console.dir(this.scene);
 
-		return {
+		const output = {
 
 			metadata: {},
 			project: {
@@ -830,12 +845,20 @@ Editor.prototype = {
 				toneMappingExposure: this.config.getKey( 'project/renderer/toneMappingExposure' )
 			},
 			camera: this.viewportCamera.toJSON(),
-			scene: this.scene.toJSON(),
+			scene: serializedScene.toJSON(),
 			scripts: this.scripts,
 			history: this.history.toJSON(),
 			environment: environment
 
 		};
+
+		if ( options.includeMarkerStates === true ) {
+
+			output.markerStates = createMarkerStateSnapshot();
+
+		}
+
+		return output;
 
 	},
 

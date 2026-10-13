@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 
+import {
+	getMarkerSystemState,
+	markMarkerPreview,
+	registerMarkerSystem
+} from './MarkerSystemRegistry.js';
+
 const QR_CODE_MARKER_PREVIEW_NAME = 'DefaultQRCodeMarkerPlaneForScale';
 const DEFAULT_QR_CODE_MARKER_PREVIEW_URL = new URL( '../files/ARQRCodeExportFiles/StanStateFabLab.png', import.meta.url ).toString();
 
@@ -13,8 +19,10 @@ function setGeneratedQRCodeMarkerImage( imageDataURL ) {
 
 function updateQRCodeMarkerPreview( markerPreview, onUpdate ) {
 
-	const generatedImage = generatedQRCodeMarkerImageDataURL !== '';
-	const sourceURL = generatedImage ? generatedQRCodeMarkerImageDataURL : DEFAULT_QR_CODE_MARKER_PREVIEW_URL;
+	const storedImageDataURL = getMarkerSystemState( 'qr' )?.imageDataURL;
+	const imageDataURL = storedImageDataURL || generatedQRCodeMarkerImageDataURL;
+	const generatedImage = imageDataURL !== '';
+	const sourceURL = generatedImage ? imageDataURL : DEFAULT_QR_CODE_MARKER_PREVIEW_URL;
 	const loadToken = ( markerPreview.userData.qrCodeMarkerPreviewLoadToken || 0 ) + 1;
 	markerPreview.userData.qrCodeMarkerPreviewLoadToken = loadToken;
 
@@ -56,11 +64,31 @@ function createQRCodeMarkerPreview( onUpdate ) {
 
 	markerPreview.name = QR_CODE_MARKER_PREVIEW_NAME;
 	markerPreview.rotation.x = - Math.PI / 2;
+	markMarkerPreview( markerPreview, 'qr' );
 	updateQRCodeMarkerPreview( markerPreview, onUpdate );
 
 	return markerPreview;
 
 }
+
+registerMarkerSystem( {
+	id: 'qr',
+	label: 'QR Marker Preview',
+	stateVersion: 1,
+	legacyPreviewNames: [ QR_CODE_MARKER_PREVIEW_NAME ],
+	createPreview: createQRCodeMarkerPreview,
+	updatePreview: updateQRCodeMarkerPreview,
+	validateState: function ( state ) {
+
+		return typeof state?.imageDataURL === 'string' && state.imageDataURL.startsWith( 'data:image/' );
+
+	},
+	applyState: function ( state ) {
+
+		generatedQRCodeMarkerImageDataURL = state?.imageDataURL ?? '';
+
+	}
+} );
 
 export {
 	QR_CODE_MARKER_PREVIEW_NAME,

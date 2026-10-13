@@ -9,7 +9,7 @@ import {
 	getQRCodeSettingConfigKey,
 	getQRCodeRenderSettingValue
 } from './QRCodeRenderSettings.js';
-import { setGeneratedQRCodeMarkerImage } from './QRCodeMarkerPreview.js';
+import { getMarkerSystemState, setMarkerSystemState } from './MarkerSystemRegistry.js';
 
 // These settings are shared by the sidebar controls and the QR publish command
 // for the current editor session.
@@ -17,6 +17,7 @@ let trackSpecificQRCode = false;
 let qrCodeInfo = '';
 let includeQRCodeInPublishedApp = false;
 let generatedQRCodeImageDataURL = '';
+let generatedQRCodeContent = '';
 
 // Return the value in the format expected by the publish command.
 // An empty string tells the exported app to keep its default QR behavior.
@@ -460,6 +461,8 @@ function SidebarQRCodeGenerator( editor ) {
 	const maxLogoDimension = 4096;
 	const maxLogoPixels = 16 * 1024 * 1024;
 	let logoImage;
+	let logoBlob;
+	let logoFileName = '';
 	let logoLoadRequest = 0;
 
 	function setLogoStatus( message, isError = false ) {
@@ -492,6 +495,8 @@ function SidebarQRCodeGenerator( editor ) {
 		logoLoadRequest ++;
 		logoImage?.close();
 		logoImage = undefined;
+		logoBlob = undefined;
+		logoFileName = '';
 		logoFileInput.value = '';
 		chooseLogoButton.setDisabled( false );
 		logoSettings.setDisplay( 'none' );
@@ -552,6 +557,8 @@ function SidebarQRCodeGenerator( editor ) {
 
 			logoImage?.close();
 			logoImage = decodedImage;
+			logoBlob = file;
+			logoFileName = file.name;
 			generatorCorrectionLevel.setValue( 'H' );
 			logoSettings.setDisplay( 'block' );
 			logoStatus.dom.title = file.name;
@@ -698,6 +705,20 @@ function SidebarQRCodeGenerator( editor ) {
 	} );
 	generatedOutput.add( saveQRCodeButton );
 
+	const resetQRCodeButton = new UIButton( 'Reset Generated QR Code' );
+	resetQRCodeButton.setWidth( '100%' );
+	resetQRCodeButton.setMarginBottom( '12px' );
+	resetQRCodeButton.onClick( () => {
+
+		if ( !confirm( 'Reset the active generated QR Code?' ) ) return;
+
+		setMarkerSystemState( 'qr', null );
+		editor.signals.markerStateChanged.dispatch( 'qr' );
+		generationStatus.setValue( 'Reset the generated QR Code.' );
+
+	} );
+	generatedOutput.add( resetQRCodeButton );
+
 	const generateQRCodeButton = new UIButton( 'Generate QR Code' );
 	generateQRCodeButton.setWidth( '100%' );
 	generateQRCodeButton.setMarginBottom( '8px' );
@@ -723,6 +744,7 @@ function SidebarQRCodeGenerator( editor ) {
 	includePublishedQRCodeCheckbox.onChange( function () {
 
 		includeQRCodeInPublishedApp = this.getValue();
+		commitQRCodeState();
 
 	} );
 	addGeneratorSettingRow(
@@ -734,7 +756,7 @@ function SidebarQRCodeGenerator( editor ) {
 
 	function markQRCodeStale() {
 
-		if ( generatedCanvas === undefined ) {
+		if ( generatedQRCodeImageDataURL === '' ) {
 
 			generationStatus.setValue( 'Changes are applied when Generate QR Code is pressed.' );
 			generationStatus.setColor( '#888' );
@@ -749,6 +771,44 @@ function SidebarQRCodeGenerator( editor ) {
 		saveQRCodeButton.setDisabled( true );
 		qrCodePreview.setOpacity( '0.65' );
 		qrCodePreview.dom.setAttribute( 'aria-label', 'Generated QR Code (out of date)' );
+
+	}
+
+	function commitQRCodeState( replaceGeneratedSettings = false ) {
+
+		if ( generatedQRCodeImageDataURL === '' ) return;
+
+		const existingState = getMarkerSystemState( 'qr' ) || {};
+		const state = {
+			...existingState,
+			imageDataURL: generatedQRCodeImageDataURL,
+			content: generatedQRCodeContent,
+			includeInPublishedApp: includeQRCodeInPublishedApp,
+			trackSpecificQRCode: trackSpecificQRCode,
+			qrCodeInfo: qrCodeInfo
+		};
+
+		if ( replaceGeneratedSettings ) {
+
+			Object.assign( state, {
+				size: generatorSize.getValue(),
+				foregroundColor: generatorForegroundColor.getValue(),
+				backgroundColor: generatorBackgroundColor.getValue(),
+				correctionLevel: generatorCorrectionLevel.getValue(),
+				quietZoneModules: generatorQuietZone.getValue(),
+				previewPixelSize: generatedCanvas === undefined ? undefined : generatedCanvas.width + generatedQuietZone * 2,
+				logoBlob: logoBlob,
+				logoFileName: logoFileName,
+				logoSize: generatorLogoSize.getValue(),
+				logoFit: generatorLogoFit.getValue(),
+				logoPadding: generatorLogoPadding.getValue(),
+				logoRadius: generatorLogoRadius.getValue()
+			} );
+
+		}
+
+		setMarkerSystemState( 'qr', state );
+		editor.signals.markerStateChanged.dispatch( 'qr' );
 
 	}
 
@@ -798,6 +858,7 @@ function SidebarQRCodeGenerator( editor ) {
 			generatedQuietZone = Math.ceil( size / moduleCount * quietZoneModules );
 			generatedBackgroundColor = backgroundColor;
 			generatedQRCodeImageDataURL = createDownloadCanvas().toDataURL( 'image/png' );
+			generatedQRCodeContent = text;
 			includePublishedQRCodeCheckbox.setDisabled( false );
 
 			const generatedSize = size + generatedQuietZone * 2;
@@ -825,8 +886,7 @@ function SidebarQRCodeGenerator( editor ) {
 			generationStatus.setValue( 'Preview matches the current content and settings.' );
 			generationStatus.setColor( '#888' );
 			generationStatus.dom.style.fontWeight = 'normal';
-			setGeneratedQRCodeMarkerImage( generatedQRCodeImageDataURL );
-			editor.signals.qrCodeMarkerChanged.dispatch();
+			commitQRCodeState( true );
 
 		} catch ( error ) {
 
@@ -919,6 +979,7 @@ function SidebarQRCodeGenerator( editor ) {
 		// onInput fires as the user types. Keeping this shared value updated means
 		// Publish can read the latest text even if the input has not lost focus.
 		qrCodeInfo = this.getValue();
+		commitQRCodeState();
 
 	} );
 	qrCodeInfoSection.add( qrCodeInfoInput );
@@ -1017,6 +1078,127 @@ function SidebarQRCodeGenerator( editor ) {
 		}
 
 		qrCodeInfoSection.setDisplay( trackSpecificQRCode ? 'block' : 'none' );
+		commitQRCodeState();
+
+	} );
+
+	async function syncActiveQRCodeState( markerSystemId ) {
+
+		if ( markerSystemId !== undefined && markerSystemId !== 'qr' ) return;
+
+		const state = getMarkerSystemState( 'qr' );
+
+		if ( state === null ) {
+
+			generatedQRCodeImageDataURL = '';
+			generatedQRCodeContent = '';
+			generatedCanvas = undefined;
+			includeQRCodeInPublishedApp = false;
+			trackSpecificQRCode = false;
+			qrCodeInfo = '';
+			generatedOutput.setDisplay( 'none' );
+			saveQRCodeButton.setDisplay( 'none' );
+			includePublishedQRCodeCheckbox.setValue( false );
+			includePublishedQRCodeCheckbox.setDisabled( true );
+			trackingCheckbox.setValue( false );
+			qrCodeInfoInput.setValue( '' );
+			qrCodeInfoSection.setDisplay( 'none' );
+			logoLoadRequest ++;
+			logoImage?.close();
+			logoImage = undefined;
+			logoBlob = undefined;
+			logoFileName = '';
+			logoSettings.setDisplay( 'none' );
+			setLogoStatus( 'No logo selected.' );
+			return;
+
+		}
+
+		generatedQRCodeImageDataURL = state.imageDataURL;
+		generatedQRCodeContent = state.content || '';
+		includeQRCodeInPublishedApp = state.includeInPublishedApp === true;
+		trackSpecificQRCode = state.trackSpecificQRCode === true;
+		qrCodeInfo = state.qrCodeInfo || '';
+		generatorInput.setValue( state.content || '' );
+		generatorSize.setValue( state.size ?? 192 );
+		generatorForegroundColor.setValue( state.foregroundColor || '#000000' );
+		generatorBackgroundColor.setValue( state.backgroundColor || '#ffffff' );
+		generatorCorrectionLevel.setValue( state.correctionLevel || 'H' );
+		generatorQuietZone.setValue( state.quietZoneModules ?? 4 );
+		generatorLogoSize.setValue( state.logoSize ?? 15 );
+		generatorLogoFit.setValue( state.logoFit || 'contain' );
+		generatorLogoPadding.setValue( state.logoPadding ?? 12 );
+		generatorLogoRadius.setValue( state.logoRadius ?? 12 );
+
+		qrCodePreview.clear();
+		const restoredImage = document.createElement( 'img' );
+		restoredImage.src = state.imageDataURL;
+		restoredImage.alt = 'Restored generated QR Code';
+		restoredImage.style.display = 'block';
+		restoredImage.style.width = '100%';
+		restoredImage.style.height = '100%';
+		qrCodePreview.dom.appendChild( restoredImage );
+		qrCodePreview.dom.style.width = `${state.previewPixelSize || state.size || 192}px`;
+		qrCodePreview.dom.style.background = state.backgroundColor || '#ffffff';
+		generatedOutput.setDisplay( 'block' );
+		saveQRCodeButton.setDisplay( '' );
+		saveQRCodeButton.setDisabled( false );
+		includePublishedQRCodeCheckbox.setValue( includeQRCodeInPublishedApp );
+		includePublishedQRCodeCheckbox.setDisabled( false );
+		trackingCheckbox.setValue( trackSpecificQRCode );
+		qrCodeInfoInput.setValue( qrCodeInfo );
+		qrCodeInfoSection.setDisplay( trackSpecificQRCode ? 'block' : 'none' );
+		generationStatus.setValue( 'Restored the last successfully generated QR Code.' );
+		generationStatus.setColor( '#888' );
+
+		if ( state.logoBlob instanceof Blob && state.logoBlob !== logoBlob && typeof createImageBitmap === 'function' ) {
+
+			const request = ++ logoLoadRequest;
+			const restoredLogoImage = await createImageBitmap( state.logoBlob );
+
+			if ( request !== logoLoadRequest ) {
+
+				restoredLogoImage.close();
+				return;
+
+			}
+
+			logoImage?.close();
+			logoImage = restoredLogoImage;
+			logoBlob = state.logoBlob;
+			logoFileName = state.logoFileName || 'Restored logo';
+			logoSettings.setDisplay( 'block' );
+			logoStatus.dom.title = logoFileName;
+			setLogoStatus( `Restored: ${logoFileName}.` );
+
+		} else if ( !( state.logoBlob instanceof Blob ) ) {
+
+			logoLoadRequest ++;
+			logoImage?.close();
+			logoImage = undefined;
+			logoBlob = undefined;
+			logoFileName = '';
+			logoSettings.setDisplay( 'none' );
+			logoStatus.dom.title = '';
+			setLogoStatus( 'No logo selected.' );
+
+		}
+
+	}
+
+	editor.signals.markerStateChanged.add( function ( markerSystemId ) {
+
+		syncActiveQRCodeState( markerSystemId ).catch( function ( error ) {
+
+			console.error( '[QR Code Generator] Unable to restore active marker state.', error );
+
+		} );
+
+	} );
+
+	syncActiveQRCodeState( 'qr' ).catch( function ( error ) {
+
+		console.error( '[QR Code Generator] Unable to initialize active marker state.', error );
 
 	} );
 

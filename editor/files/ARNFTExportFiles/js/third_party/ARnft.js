@@ -807,6 +807,7 @@ class CameraViewRenderer {
                     video: {
                         facingMode: this._facing,
                         width: { min: videoSettings.width.min, max: videoSettings.width.max },
+                        height: { min: videoSettings.height.min, max: videoSettings.height.max },
                     },
                 };
                 if (navigator.mediaDevices.enumerateDevices) {

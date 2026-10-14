@@ -20,6 +20,41 @@
     <script src="js/third_party/ARnft.js"></script>
 
     <script>
+        // NFT exports run without APP.js, so this template needs its own copy of the
+        // light-target repair used by the regular marker-app export.
+        function restoreTrackedLightTargets(root) {
+            // SpotLights and DirectionalLights aim at a separate Object3D called a
+            // "target" instead of using the light object's rotation. ObjectLoader
+            // creates a new default target, so we must restore the exported target.
+            const lightTargetLinks = [];
+
+            // First collect the saved relationships while walking the loaded scene.
+            root.traverse(function (object) {
+                // The publishing code writes the target's unique ID into userData
+                // because Three.js preserves userData when it writes and reads JSON.
+                const targetUuid = object.userData && object.userData.__arLightTargetUuid;
+
+                // Other light types do not aim at target objects and need no repair.
+                if ((object.isSpotLight || object.isDirectionalLight) && typeof targetUuid === 'string') {
+                    lightTargetLinks.push({ light: object, targetUuid: targetUuid });
+                }
+            });
+
+            // Now every object is available, so reconnect each light to its exact target.
+            lightTargetLinks.forEach(function (link) {
+                // UUIDs are unique even when two target objects happen to share a name.
+                const target = root.getObjectByProperty('uuid', link.targetUuid, true);
+
+                if (target) {
+                    // Replacing the default target restores the direction seen in the editor.
+                    link.light.target = target;
+                } else {
+                    // A missing target should not prevent the rest of the AR scene from loading.
+                    console.warn('Unable to restore tracked light target:', link.targetUuid);
+                }
+            });
+        }
+
         const entities = [
             //ADD_MARKER_LOCATIONS_HERE
             //Markers should be added in this manner:s

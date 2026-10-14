@@ -24,6 +24,8 @@ const AR_QR_CODE_TEMPLATE_BASE_PATH = '../editor/files/ARQRCodeExportFiles/';
 const AR_QR_CODE_CONFIG_PATH = 'src/config/render-config.json';
 const AR_QR_CODE_MODEL_PATH = 'models/model.glb';
 const AR_QR_CODE_IMAGE_PATH = 'qrcode.png';
+// Three.js saves userData in scene JSON, so this private key carries a light target's ID into the exported app.
+const AR_LIGHT_TARGET_UUID_KEY = '__arLightTargetUuid';
 
 const AR_QR_CODE_EXPORT_FILES = [
 	'Readme.md',
@@ -210,9 +212,66 @@ function injectARMarkerAppExportSettings(appJSContent, settings) {
 
 }
 
+function preserveTrackedLightTargets(sourceScene, sceneClone) {
+
+	// SpotLights and DirectionalLights point from the light toward a separate Object3D
+	// stored in light.target. That target is often outside the scene's child list, so a
+	// normal scene clone can leave it behind and make the exported light point elsewhere.
+	const sceneWorldInverse = new THREE.Matrix4();
+	const targetWorldPosition = new THREE.Vector3();
+
+	// Refresh every object's world transform before asking where a target is located.
+	sourceScene.updateMatrixWorld(true);
+	// New target objects will be children of the cloned scene. This inverse matrix converts
+	// a target's world position back into the local coordinates used by that scene root.
+	sceneWorldInverse.copy(sourceScene.matrixWorld).invert();
+
+	sourceScene.traverse(function (sourceLight) {
+
+		// Point and ambient lights shine without target objects, so they need no repair.
+		if ((!sourceLight.isSpotLight && !sourceLight.isDirectionalLight) || !sourceLight.target) return;
+
+		// cloneSceneWithoutMarkerPreviews keeps UUIDs unchanged, which lets us find the
+		// cloned version of this exact light without depending on names.
+		const clonedLight = sceneClone.getObjectByProperty('uuid', sourceLight.uuid, true);
+		if (clonedLight === undefined) return;
+
+		// Reuse the cloned target when it was already a scene child.
+		let clonedTarget = sceneClone.getObjectByProperty('uuid', sourceLight.target.uuid, true);
+
+		if (clonedTarget === undefined) {
+
+			// The usual case is a target that was not part of the scene tree. Create a plain,
+			// invisible Object3D to represent the same aiming point in the exported scene.
+			clonedTarget = new THREE.Object3D();
+			// Preserve the ID so the exported runtime can find this target after loading JSON.
+			clonedTarget.uuid = sourceLight.target.uuid;
+			// A readable name is useful when inspecting the generated scene, but does not affect lighting.
+			clonedTarget.name = sourceLight.target.name || `${sourceLight.name || sourceLight.type} Target`;
+
+			// Keep the target at the same visible-world location even though its parent is changing.
+			sourceLight.target.getWorldPosition(targetWorldPosition);
+			clonedTarget.position.copy(targetWorldPosition).applyMatrix4(sceneWorldInverse);
+			clonedTarget.updateMatrix();
+			// Adding it to the clone ensures sceneClone.toJSON() actually writes the target out.
+			sceneClone.add(clonedTarget);
+
+		}
+
+		// Keep the clone correct now, then save the relationship explicitly because Three.js
+		// serializes a light and its target as objects but does not serialize the link between them.
+		clonedLight.target = clonedTarget;
+		clonedLight.userData[AR_LIGHT_TARGET_UUID_KEY] = clonedTarget.uuid;
+
+	});
+
+}
+
 function createEditorExportDataWithoutNamedObjects(editor) {
 
 	const sceneClone = cloneSceneWithoutMarkerPreviews(editor.scene);
+	// Repair light targets on the cleaned clone before it is converted to app.json.
+	preserveTrackedLightTargets(editor.scene, sceneClone);
 	const data = editor.toJSON();
 	const scripts = {};
 
@@ -1339,6 +1398,8 @@ async function publishARNFTApp() {
 							.then(function(json) {
 								var objectLoader = new THREE.ObjectLoader();
 								var loadedScene = objectLoader.parse(json.scene);
+								// ObjectLoader gives each light a fresh default target, so reconnect the exported one.
+								restoreTrackedLightTargets(loadedScene);
 								loadedScene.scale.set(80, 80, 80);
 								loadedScene.rotation.x = Math.PI / 2;
 								nftAddTJS.add(loadedScene, 'generatedMarkerFile', false);

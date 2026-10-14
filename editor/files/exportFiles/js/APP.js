@@ -65,6 +65,42 @@ function getBooleanSetting(value, fallback) {
     return typeof value === 'boolean' ? value : fallback;
 }
 
+function restoreTrackedLightTargets(root) {
+    // SpotLights and DirectionalLights aim at a separate Object3D called a "target".
+    // They do not use their own rotation to decide which way the light points.
+    // ObjectLoader creates a new default target when it rebuilds a light, so the
+    // saved UUID lets us reconnect that light to the target exported with the scene.
+    var lightTargetLinks = [];
+
+    // First collect the saved links. Waiting until the traversal is finished makes
+    // sure every possible target object has already been found in the loaded scene.
+    root.traverse(function (object) {
+        // userData is included in Three.js JSON. The publishing code stores the
+        // target object's unique ID here before it serializes the scene.
+        var targetUuid = object.userData && object.userData.__arLightTargetUuid;
+
+        // Only spot and directional lights use a target to determine their direction.
+        if ((object.isSpotLight || object.isDirectionalLight) && typeof targetUuid === 'string') {
+            lightTargetLinks.push({ light: object, targetUuid: targetUuid });
+        }
+    });
+
+    // Replace each light's temporary default target with its exported target object.
+    lightTargetLinks.forEach(function (link) {
+        // A UUID is Three.js's unique object ID, so this finds the exact target even
+        // when several targets have the same name.
+        var target = root.getObjectByProperty('uuid', link.targetUuid, true);
+
+        if (target) {
+            // Once reconnected, the light points in the same direction as it did in the editor.
+            link.light.target = target;
+        } else {
+            // Keep the default target rather than stopping the whole app if export data is incomplete.
+            console.warn('Unable to restore tracked light target:', link.targetUuid);
+        }
+    });
+}
+
 // Split the generated settings into local aliases so each setup section reads from its own group.
 const cameraSettings = AR_MARKER_APP_EXPORT_SETTINGS.camera || {};
 const arToolkitSourceSettings = AR_MARKER_APP_EXPORT_SETTINGS.arToolkitSource || {};
@@ -389,6 +425,9 @@ var APP = {
             //Start new code:
             // Load the user provided scene from json
             var loadedScene = loader.parse(json.scene);
+            // Parsing rebuilds the objects, but it cannot infer which target belongs to each light.
+            // Restore those links before the scene is attached to the AR marker.
+            restoreTrackedLightTargets(loadedScene);
 
             // Auto-play imported clip animations (e.g. GLB clips attached to objects).
             animationMixers = [];

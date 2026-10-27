@@ -524,6 +524,8 @@ Geometry stores shape: vertices, faces or triangles, normals, and sometimes text
 
 The app adds one configurable white point light unless a glTF or Object JSON scene contains at least one embedded light. When embedded lights are detected, the default point light is skipped. That preserves authored lighting, but it also means a weak, disabled, or badly positioned embedded light can make a model look black.
 
+Apps published from the AR editor store the scene as `models/model.json` in Object/Editor JSON format instead of converting it to GLB. This preserves the editor's ambient, hemisphere, directional, point, and spot lights. Publishing also records directional and spot target UUIDs; the runtime reconnects those targets after `ObjectLoader` parses the scene. A serialized scene environment texture is copied to the QR root scene for image-based lighting without replacing the transparent camera backdrop. Project shadow enablement, shadow-map type, tone mapping, and exposure are applied to the QR renderer. The older bundled renderer explicitly uses sRGB output and physically correct light intensity handling to match the editor's newer Three.js defaults.
+
 Imported materials are generally preserved. The `render.model.material` controls only materials the app creates itself; they do not recolor glTF materials or legacy JSON materials already stored in a model. `debugWireframe` has the same limitation.
 
 ### Position, rotation, and scale
@@ -542,7 +544,7 @@ model.rotation.y =  estimatedY + rotationOffset.y
 model.rotation.z =  estimatedZ + rotationOffset.z
 ```
 
-`posePitchSign` is `-1` for GLB and `1` for the other formats. This format-specific correction makes GLB pitch follow the QR code despite its opposite imported basis. Static axis normalization happens inside the tracked root, independently of live pose. User offsets are applied afterward, making `rotationOffset` the right place to correct an exported model that faces sideways or lies on the wrong plane.
+`posePitchSign` is `-1` for GLB and editor-published App JSON, and `1` for the other formats. This format-specific correction makes pitch follow the QR code after those scenes receive their imported-basis correction. Static axis normalization happens inside the tracked root, independently of live pose. User offsets are applied afterward, making `rotationOffset` the right place to correct an exported model that faces sideways or lies on the wrong plane.
 
 Position uses the estimated X/Y translation and a configured remapping of POSIT depth. `positionOffset` is added last. Because offsets are in scene units and rotations are in radians, make one small change at a time when aligning a new asset.
 
@@ -587,8 +589,8 @@ The file extension in `render.model.path` selects the loader. Supported extensio
 | Textures | Supported by the imported scene | Not supported by STL | Possible when referenced by embedded materials | Possible when referenced by objects/materials |
 | Embedded lights | Detected and used | None | Not represented by this geometry path | Detected and used |
 | Animation playback | All `gltf.animations` clips auto-play together | Not available; remains static | Not guaranteed by the current legacy mesh path | Attached `object.animations` clips auto-play |
-| Axis normalization | `.gltf`: `-PI/2` on X; `.glb`: `+PI/2` on X | None | None | None |
-| Live pitch sign | `.gltf`: normal; `.glb`: inverted to match marker motion | Normal | Normal | Normal |
+| Axis normalization | `.gltf`: `-PI/2` on X; `.glb`: `+PI/2` on X | None | None | Published editor App JSON: `+PI/2` on X; generic Object JSON: none |
+| Live pitch sign | `.gltf`: normal; `.glb`: inverted to match marker motion | Normal | Normal | Published editor App JSON: inverted; generic Object JSON: normal |
 | Placement modes | Full support | Z-face anchor only; authored X/Y origin remains | Geometry is centered | Full support |
 | Multi-object hierarchy | Preserved | No | No | Preserved |
 
@@ -654,10 +656,12 @@ Current Object JSON behavior is intentionally aligned with glTF behavior:
 
 1. `THREE.ObjectLoader` parses the object or editor scene.
 2. The hierarchy, materials, and child transforms are preserved.
-3. The result goes through bounds-based placement without automatic axis rotation.
-4. Embedded lights are detected and suppress the default point light.
-5. The app's AR camera remains the renderer camera, regardless of cameras in the JSON scene.
-6. Every clip attached to an object's `object.animations` array starts on a mixer rooted at that object.
+3. Editor-published App JSON receives the same `+PI/2` axis and pitch correction as the former GLB publishing path; generic Object JSON receives no automatic axis rotation.
+4. Directional and spot targets saved by the publisher are reconnected after parsing.
+5. Embedded lights are detected and suppress the default point light.
+6. Editor project shadow and tone-mapping settings are applied when present.
+7. The app's AR camera remains the renderer camera, regardless of cameras in the JSON scene.
+8. Every clip attached to an object's `object.animations` array starts on a mixer rooted at that object.
 
 Object/Editor JSON animation playback depends on `THREE.ObjectLoader` parsing the file's animation records and attaching them to objects. Multiple animated objects can each receive their own mixer, and duplicate clip references on the same object are ignored. This support does not extend to the separate legacy geometry JSON loader.
 
@@ -722,7 +726,7 @@ First inspect `modelUnitScale`. Because it overrides format defaults globally, a
 
 ### The model is sideways or upside down
 
-Models whose paths end in `.gltf` receive an automatic `-PI/2` X rotation. GLB models receive `+PI/2` plus an inverted live pitch sign. Object JSON, STL, and legacy JSON receive no automatic import rotation or pitch inversion. Extension comparison is case-insensitive. Apply `rotationOffset` after identifying the source file's up axis. Use radians: `PI/2` is approximately `1.5708`, `PI` is approximately `3.1416`.
+Models whose paths end in `.gltf` receive an automatic `-PI/2` X rotation. GLB models and editor-published App JSON receive `+PI/2` plus an inverted live pitch sign. Generic Object JSON, STL, and legacy JSON receive no automatic import rotation or pitch inversion. Extension comparison is case-insensitive. Apply `rotationOffset` after identifying the source file's up axis. Use radians: `PI/2` is approximately `1.5708`, `PI` is approximately `3.1416`.
 
 ### The model floats above or cuts through the QR plane
 

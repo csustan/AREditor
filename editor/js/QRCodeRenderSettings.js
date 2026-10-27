@@ -997,6 +997,7 @@ function createQRCodeRenderConfig( templateContent, settingValues, generatedValu
 	}
 
 	setQRCodeRenderConfigValue( renderConfig, [ 'render', 'model', 'path' ], generatedValues.modelPath );
+	setQRCodeRenderConfigValue( renderConfig, [ 'render', 'model', 'jsonMode' ], generatedValues.modelJSONMode );
 	setQRCodeRenderConfigValue( renderConfig, [ 'render', 'pageTitle' ], generatedValues.pageTitle );
 	setQRCodeRenderConfigValue(
 		renderConfig,

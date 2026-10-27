@@ -252,6 +252,9 @@ var canvas, img, context, video, start, streaming, detector, lastBC, posit, scan
   // Core Three.js objects: the scene owns objects, the camera defines the view,
   // and the renderer draws that view into a WebGL canvas.
 var scene, camera, renderer;
+  // Editor App JSON carries renderer settings separately from its scene graph.
+  // Save them until WebGLRenderer exists, since model loading is asynchronous.
+var importedRendererProjectSettings = null;
   // An AnimationMixer acts like a playback controller for animation clips. Keep
   // every active mixer here so the existing frame loop can advance all of them.
 var animationMixers = [];
@@ -703,7 +706,7 @@ function createTrackedGroupFromGltf(gltfScene, unitScale, modelExtension) {
   // reversed when the live POSIT rotation is applied later.
   if (modelExtension === 'gltf') {
     axisRotationX = -Math.PI / 2;
-  } else if (modelExtension === 'glb') {
+  } else if (modelExtension === 'glb' || modelExtension === 'editor') {
     axisRotationX = Math.PI / 2;
     posePitchSign = -1;
   }
@@ -749,7 +752,7 @@ function createTrackedGroupFromGltf(gltfScene, unitScale, modelExtension) {
   group.userData.posePitchSign = posePitchSign;
   group.visible = false;
 
-  console.log('Loaded GLTF model bounds:', bbox.min, bbox.max, 'placementMode:', placementMode, 'bboxZFace:', bboxZFace, 'zAnchor:', zAnchor, 'axisRotationX:', axisRotationX, 'posePitchSign:', posePitchSign, 'unitScale:', unitScale, 'finalScale:', finalScale);
+  console.log('Loaded scene model bounds:', bbox.min, bbox.max, 'placementMode:', placementMode, 'bboxZFace:', bboxZFace, 'zAnchor:', zAnchor, 'axisRotationX:', axisRotationX, 'posePitchSign:', posePitchSign, 'unitScale:', unitScale, 'finalScale:', finalScale);
   return group;
 }
 
@@ -819,6 +822,29 @@ function detectJsonModelType(jsonData, jsonMode) {
   return 'legacy';
 }
 
+/** Reconnect target objects that Three.js JSON stores separately from lights. */
+function restoreTrackedLightTargets(root) {
+  var lightTargetLinks = [];
+
+  root.traverse(function(object) {
+    var targetUuid = object.userData && object.userData.__arLightTargetUuid;
+
+    if ((object.isSpotLight || object.isDirectionalLight) && typeof targetUuid === 'string') {
+      lightTargetLinks.push({ light: object, targetUuid: targetUuid });
+    }
+  });
+
+  lightTargetLinks.forEach(function(link) {
+    var target = root.getObjectByProperty('uuid', link.targetUuid);
+
+    if (target) {
+      link.light.target = target;
+    } else {
+      console.warn('Unable to restore tracked light target:', link.targetUuid);
+    }
+  });
+}
+
 /** Parse a modern Three.js object/editor JSON document into a scene object. */
 function parseObjectModelFromJson(jsonData) {
   // Fail with a useful message if the installed Three.js build lacks the parser.
@@ -830,11 +856,42 @@ function parseObjectModelFromJson(jsonData) {
   var objectLoader = new THREE.ObjectLoader();
 
   // Three.js editor "App" exports place renderable content under scene.
+  var objectRoot;
+
   if (jsonData && jsonData.metadata && jsonData.metadata.type === 'App' && jsonData.scene) {
-    return objectLoader.parse(jsonData.scene);
+    objectRoot = objectLoader.parse(jsonData.scene);
+  } else {
+    objectRoot = objectLoader.parse(jsonData);
   }
 
-  return objectLoader.parse(jsonData);
+  restoreTrackedLightTargets(objectRoot);
+  return objectRoot;
+}
+
+/** Apply renderer options saved by the editor alongside an App JSON scene. */
+function applyEditorRendererSettings(rendererRef, projectSettings) {
+  if (!rendererRef || !projectSettings) {
+    return;
+  }
+
+  if (typeof projectSettings.shadows === 'boolean') {
+    rendererRef.shadowMap.enabled = projectSettings.shadows;
+  }
+
+  var shadowType = Number(projectSettings.shadowType);
+  if (Number.isFinite(shadowType)) {
+    rendererRef.shadowMap.type = shadowType;
+  }
+
+  var toneMapping = Number(projectSettings.toneMapping);
+  if (Number.isFinite(toneMapping)) {
+    rendererRef.toneMapping = toneMapping;
+  }
+
+  var toneMappingExposure = Number(projectSettings.toneMappingExposure);
+  if (Number.isFinite(toneMappingExposure)) {
+    rendererRef.toneMappingExposure = toneMappingExposure;
+  }
 }
 
 /**
@@ -960,11 +1017,17 @@ function loadTrackedMesh(sceneRef, onReady) {
         if (resolvedJsonType === 'object') {
           var objectRoot = parseObjectModelFromJson(jsonData);
           var objectJsonLightInfo = detectEmbeddedLights(objectRoot);
-          var trackedObject = createTrackedGroupFromGltf(objectRoot, unitScale, ext);
+          var modelBasis = jsonData.metadata.type === 'App' ? 'editor' : ext;
+          var trackedObject = createTrackedGroupFromGltf(objectRoot, unitScale, modelBasis);
           logEmbeddedLighting(ext, modelPath, objectJsonLightInfo);
           // ObjectLoader attaches each parsed clip array to its owning object.
           startObjectAnimations(objectRoot);
-          onReady(trackedObject, objectJsonLightInfo);
+          onReady(
+            trackedObject,
+            objectJsonLightInfo,
+            jsonData.project || null,
+            objectRoot.isScene ? objectRoot.environment : null
+          );
           return;
         }
 
@@ -1176,7 +1239,7 @@ function startApp() {
 
     // Loading starts asynchronously. The rest of scene setup can continue while
     // the browser fetches and parses the configured model file.
-    loadTrackedMesh(scene, function(loadedMesh, lightInfo) {
+    loadTrackedMesh(scene, function(loadedMesh, lightInfo, projectSettings, modelEnvironment) {
       // Keep the returned mesh/group in shared state so every render frame can
       // update the same object's transform rather than rebuilding the model.
       mesh = loadedMesh;
@@ -1186,6 +1249,16 @@ function startApp() {
       // Initialize all nested materials to the current (normally zero) opacity.
       applyVisibilityAlpha(mesh, renderState.visibilityAlpha);
       mesh.visible = false;
+
+      importedRendererProjectSettings = projectSettings;
+      applyEditorRendererSettings(renderer, importedRendererProjectSettings);
+
+      // Environment lighting is read from the root scene supplied to render().
+      // The imported editor Scene is nested under the tracked model wrapper, so
+      // copy only its environment texture and retain the transparent AR backdrop.
+      if (modelEnvironment) {
+        scene.environment = modelEnvironment;
+      }
 
       // Avoid double-lighting a model whose glTF/object scene already defines how
       // it should be lit. Geometry-only formats receive the configurable light.
@@ -1201,8 +1274,13 @@ function startApp() {
     // WebGLRenderer turns the virtual scene into pixels in the visible canvas.
     // Alpha support is essential because the camera video must show through.
     renderer = new THREE.WebGLRenderer({canvas: canvas, alpha: true});
+    // The editor uses sRGB output and physically based light intensities. Its
+    // bundled Three.js revision enables these differently than this older build.
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.physicallyCorrectLights = true;
     // Clear each frame to fully transparent black instead of an opaque backdrop.
     renderer.setClearColor( 0x000000, 0);
+    applyEditorRendererSettings(renderer, importedRendererProjectSettings);
 
 
 
@@ -1578,8 +1656,8 @@ function startApp() {
           // tracked marker plane, then adds any user-configured Z adjustment.
           mesh.position.z = newZ + APP_CONFIG.render.model.positionOffset.z - anchorOffsetZ;
 
-          // GLB wrapping stores -1 because its corrected axes need pitch reversed;
-          // other formats use the neutral multiplier of 1.
+          // GLB and published editor-scene wrapping store -1 because their corrected
+          // axes need pitch reversed; other formats use the neutral multiplier of 1.
           var posePitchSign = mesh.userData && mesh.userData.posePitchSign !== undefined
             ? mesh.userData.posePitchSign
             : 1;

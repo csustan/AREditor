@@ -22,7 +22,7 @@ const AR_MARKER_APP_EXPORT_SETTINGS_BLOCK = /\/\/ __AR_MARKER_APP_EXPORT_SETTING
 
 const AR_QR_CODE_TEMPLATE_BASE_PATH = '../editor/files/ARQRCodeExportFiles/';
 const AR_QR_CODE_CONFIG_PATH = 'src/config/render-config.json';
-const AR_QR_CODE_MODEL_PATH = 'models/model.glb';
+const AR_QR_CODE_MODEL_PATH = 'models/model.json';
 const AR_QR_CODE_IMAGE_PATH = 'qrcode.png';
 // Three.js saves userData in scene JSON, so this private key carries a light target's ID into the exported app.
 const AR_LIGHT_TARGET_UUID_KEY = '__arLightTargetUuid';
@@ -1734,17 +1734,13 @@ async function publishARQRCodeTrackerApp() {
 
 		// Reuse one title for both the browser tab and the downloaded ZIP filename.
 		const appTitle = config.getKey('project/title') || 'AR QR Code Tracker App';
-		// GLTFExporter converts the scene being edited into GLB, a single binary file
-		// that stores the 3D objects, materials, and animations for the exported app.
-		const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
-		// Work on a copy so removing editor-only objects cannot alter the open project.
-		const scene = cloneSceneWithoutMarkerPreviews(editor.scene);
-		const animations = getAnimations(scene);
-		const exporter = new GLTFExporter();
-		// Promise.all starts both independent jobs together: export the 3D model and
-		// fetch the template configuration file. "await" pauses here until both finish.
-		const [model, configResponse] = await Promise.all([
-			exporter.parseAsync(scene, { binary: true, animations: animations }),
+		// ObjectLoader JSON preserves every Three.js light type and the editor's
+		// renderer settings, which the glTF lighting extension cannot represent.
+		const model = createEditorExportDataWithoutNamedObjects(editor);
+		model.metadata.type = 'App';
+		delete model.history;
+		const [modelJSON, configResponse] = await Promise.all([
+			Promise.resolve(JSON.stringify(model, null, '\t')),
 			fetchARQRCodeTemplateFile(AR_QR_CODE_CONFIG_PATH)
 		]);
 
@@ -1756,13 +1752,15 @@ async function publishARQRCodeTrackerApp() {
 
 		// Build a new render-config.json for this download. The original template on
 		// disk is left unchanged. Besides the sidebar values, three fields come from
-		// the current export: where its GLB is stored, its title, and the QR data to match.
+		// the current export: where its model JSON is stored, its title, and the QR data to match.
 		const renderConfig = createQRCodeRenderConfig(
 			renderConfigTemplate,
 			renderSettingValues,
 			{
-				// The ZIP stores the newly exported 3D scene at this relative path.
+				// The ZIP stores the newly exported editor scene at this relative path.
 				modelPath: AR_QR_CODE_MODEL_PATH,
+				// Published model.json is editor App JSON, never legacy geometry JSON.
+				modelJSONMode: 'object',
 				// The exported web page displays the same title as the editor project.
 				pageTitle: appTitle,
 				// An empty string means "track the first QR code found". Otherwise, the
@@ -1773,10 +1771,10 @@ async function publishARQRCodeTrackerApp() {
 
 		// Brackets let a variable supply an object key. Here they place each generated
 		// file at its required path inside the ZIP. The new config replaces the template
-		// config, while the GLB becomes the model that the QR tracker displays.
+		// config, while the editor JSON becomes the model that the QR tracker displays.
 		const generatedFiles = {
 			[AR_QR_CODE_CONFIG_PATH]: renderConfig,
-			[AR_QR_CODE_MODEL_PATH]: model
+			[AR_QR_CODE_MODEL_PATH]: modelJSON
 		};
 		const qrCodeImage = getQRCodeImageForPublishing();
 

@@ -10,6 +10,7 @@ import {
 	getQRCodeRenderSettingValue
 } from './QRCodeRenderSettings.js';
 import { getMarkerSystemState, setMarkerSystemState } from './MarkerSystemRegistry.js';
+import { createProjectTitleRow } from './Sidebar.Project.js';
 
 // These settings are shared by the sidebar controls and the QR publish command
 // for the current editor session.
@@ -241,6 +242,8 @@ function SidebarQRCodeGenerator( editor ) {
 	header.setFontSize( '14px' );
 	header.setMarginBottom( '12px' );
 	content.add( header );
+
+	content.add( createProjectTitleRow( editor ) );
 
 	const publishButton = new UIButton( editor.strings.getKey( 'menubar/file/publish_arqr' ) );
 	publishButton.setWidth( '100%' );

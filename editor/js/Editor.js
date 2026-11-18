@@ -48,6 +48,7 @@ function Editor() {
 
 		// publishing
 
+		projectTitleChanged: new Signal(),
 		publishARMarkerApp: new Signal(),
 		publishARNFTApp: new Signal(),
 		publishARQRCodeTrackerApp: new Signal(),
@@ -578,6 +579,17 @@ Editor.prototype = {
 			object.material = newMaterial;
 
 		}
+
+	},
+
+	setProjectTitle: function ( value ) {
+
+		const title = String( value ?? '' );
+
+		if ( this.config.getKey( 'project/title' ) === title ) return;
+
+		this.config.setKey( 'project/title', title );
+		this.signals.projectTitleChanged.dispatch( title );
 
 	},
 

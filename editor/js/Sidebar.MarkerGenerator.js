@@ -6,6 +6,7 @@ import {
   registerMarkerSystem,
   setMarkerSystemState
 } from './MarkerSystemRegistry.js';
+import { createProjectTitleRow } from './Sidebar.Project.js';
 
 //This will generate a Canvas Element that will work as a fall back wor whn the images won't load.
 //It's returned as a URL to be compatible with the rest of the code.
@@ -376,6 +377,8 @@ function SidebarMarkerGenerator(editor) {
   header.setMarginBottom('8px');
   header.dom.style.display = 'block';
   content.add(header);
+
+  content.add(createProjectTitleRow(editor));
 
   const publishButton = new UIButton(editor.strings.getKey('menubar/file/publish_ar'));
   publishButton.setWidth('100%');

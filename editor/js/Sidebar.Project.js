@@ -4,6 +4,33 @@ import { UIPanel, UIRow, UIInput, UICheckbox, UIText, UISpan } from './libs/ui.j
 import { SidebarProjectRenderer } from './Sidebar.Project.Renderer.js';
 import { SidebarProjectVideo } from './Sidebar.Project.Video.js';
 
+function createProjectTitleRow( editor ) {
+
+	const strings = editor.strings;
+	const title = new UIInput( editor.config.getKey( 'project/title' ) ).setLeft( '100px' ).setWidth( '150px' );
+	const titleLabel = strings.getKey( 'sidebar/project/title' );
+	const titleRow = new UIRow();
+
+	title.dom.setAttribute( 'aria-label', titleLabel );
+	title.onChange( function () {
+
+		editor.setProjectTitle( this.getValue() );
+
+	} );
+
+	editor.signals.projectTitleChanged.add( function ( value ) {
+
+		if ( title.getValue() !== value ) title.setValue( value );
+
+	} );
+
+	titleRow.add( new UIText( titleLabel ).setWidth( '90px' ) );
+	titleRow.add( title );
+
+	return titleRow;
+
+}
+
 function SidebarProject( editor ) {
 
 	const config = editor.config;
@@ -19,17 +46,7 @@ function SidebarProject( editor ) {
 
 	// Title
 
-	const titleRow = new UIRow();
-	const title = new UIInput( config.getKey( 'project/title' ) ).setLeft( '100px' ).setWidth( '150px' ).onChange( function () {
-
-		config.setKey( 'project/title', this.getValue() );
-
-	} );
-
-	titleRow.add( new UIText( strings.getKey( 'sidebar/project/title' ) ).setWidth( '90px' ) );
-	titleRow.add( title );
-
-	settings.add( titleRow );
+	settings.add( createProjectTitleRow( editor ) );
 
 	// Editable
 
@@ -74,8 +91,7 @@ function SidebarProject( editor ) {
 
 	signals.editorCleared.add( function () {
 
-		title.setValue( '' );
-		config.setKey( 'project/title', '' );
+		editor.setProjectTitle( '' );
 
 	} );
 
@@ -83,4 +99,4 @@ function SidebarProject( editor ) {
 
 }
 
-export { SidebarProject };
+export { SidebarProject, createProjectTitleRow };

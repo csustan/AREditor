@@ -17,6 +17,7 @@ import {
 	getNFTMarkerExportSettings,
 	setNFTMarkerExportSettings
 } from './NFTMarkerExportSettings.js';
+import { createProjectTitleRow } from './Sidebar.Project.js';
 
 //import nftMarkerCreatorFactory from './libs/nft/NftMarkerCreator.min.js';
 
@@ -335,6 +336,8 @@ function SidebarNFTMarkerGenerator(editor) {
 	header.setMarginBottom( '8px' );
 	header.dom.style.display = 'block'; // ensures the next text does not sit on the same line
 	content.add( header );
+
+	content.add( createProjectTitleRow( editor ) );
 
 	const publishButton = new UIButton( 'Publish App with Active NFT' );
 	publishButton.setWidth( '100%' );

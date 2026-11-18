@@ -70,17 +70,17 @@ export default class NFTWorker {
      * @param imageData
      * @param renderUpdate
      * @param trackUpdate
-     * @param oef
+     * @param settings
      * @returns true if succesfull.
      */
-    async initialize(cameraURL, renderUpdate, trackUpdate, oef) {
+    async initialize(cameraURL, renderUpdate, trackUpdate, settings) {
         this.worker = new Worker();
         const worker = this.worker;
         this.target.addEventListener("terminateWorker-" + this.name, function () {
             worker.postMessage({ type: "stop" });
             worker.terminate();
         });
-        return await this.load(cameraURL, renderUpdate, trackUpdate, oef);
+        return await this.load(cameraURL, renderUpdate, trackUpdate, settings);
     }
     /**
      * This is the function that will pass the video stream to the worker.
@@ -100,10 +100,11 @@ export default class NFTWorker {
      * @param imageData image data from the video stream.
      * @param renderUpdate renderUpdate function for the stats.
      * @param trackUpdate trackUpdate function for the stats.
-     * @param oef oef boolean for filtering the matrix.
+     * @param settings NFT export settings to apply in the worker.
      * @returns true if succesfull.
      */
-    load(cameraURL, renderUpdate, trackUpdate, oef) {
+    load(cameraURL, renderUpdate, trackUpdate, settings) {
+        const exportSettings = settings && typeof settings === "object" ? settings : { oef: settings };
         let [sw, sh, pw, ph, w, h] = getWindowSize(this.vw, this.vh);
         const setWindowSizeEvent = new CustomEvent("getWindowSize", { detail: { sw: sw, sh: sh } });
         this.target.dispatchEvent(setWindowSizeEvent);
@@ -114,11 +115,16 @@ export default class NFTWorker {
             camera_para: cameraURL,
             marker: this.markerURL,
             addPath: this.addPath,
-            oef: oef,
+            oef: exportSettings.oef,
+            settings: exportSettings,
         });
         this.worker.onmessage = (ev) => {
             var msg = ev.data;
             switch (msg.type) {
+                case "error": {
+                    console.error("NFT tracking worker error:", msg.message);
+                    break;
+                }
                 case "loaded": {
                     var proj = JSON.parse(msg.proj);
                     const ratioW = pw / w;

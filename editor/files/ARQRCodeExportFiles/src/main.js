@@ -770,11 +770,8 @@ function createTrackedMeshFromJson(geometry, materials, unitScale) {
 
   var material;
   if (materials && materials.length > 0) {
-    // One material can be used directly. Multiple materials need a container
-    // that lets different faces refer to different material indices.
-    // In bundled Three.js r132, MeshFaceMaterial is a removed-API compatibility
-    // shim that warns and returns this array; newer code should pass the array.
-    material = materials.length === 1 ? materials[0] : new THREE.MeshFaceMaterial(materials);
+    // Modern Three.js accepts a material array directly for geometry groups.
+    material = materials.length === 1 ? materials[0] : materials;
   } else {
     // Supply the same configurable fallback material used for STL geometry.
     material = new THREE.MeshPhongMaterial({
@@ -892,6 +889,63 @@ function applyEditorRendererSettings(rendererRef, projectSettings) {
   if (Number.isFinite(toneMappingExposure)) {
     rendererRef.toneMappingExposure = toneMappingExposure;
   }
+}
+
+var qrShadowCamerasByRoot = new WeakMap();
+var qrShadowScalesByRoot = new WeakMap();
+
+function updateQRShadowCameras(root, scale) {
+  if (!root || !root.traverse || !Number.isFinite(scale)) {
+    return;
+  }
+
+  var absoluteScale = Math.abs(scale);
+  if (absoluteScale === 0 || qrShadowScalesByRoot.get(root) === absoluteScale) {
+    return;
+  }
+
+  var shadowCameras = qrShadowCamerasByRoot.get(root);
+  if (shadowCameras === undefined) {
+    shadowCameras = [];
+    root.traverse(function(object) {
+      if (!object.shadow || !object.shadow.camera) {
+        return;
+      }
+
+      var camera = object.shadow.camera;
+      shadowCameras.push({
+        camera: camera,
+        shadow: object.shadow,
+        left: camera.left,
+        right: camera.right,
+        top: camera.top,
+        bottom: camera.bottom,
+        near: camera.near,
+        far: camera.far,
+        normalBias: object.shadow.normalBias
+      });
+    });
+    qrShadowCamerasByRoot.set(root, shadowCameras);
+  }
+
+  shadowCameras.forEach(function(shadowCamera) {
+    var camera = shadowCamera.camera;
+
+    // Shadow cameras are separate from the model hierarchy and do not inherit its scale.
+    if (camera.isOrthographicCamera) {
+      camera.left = shadowCamera.left * absoluteScale;
+      camera.right = shadowCamera.right * absoluteScale;
+      camera.top = shadowCamera.top * absoluteScale;
+      camera.bottom = shadowCamera.bottom * absoluteScale;
+    }
+
+    camera.near = shadowCamera.near * absoluteScale;
+    camera.far = shadowCamera.far * absoluteScale;
+    shadowCamera.shadow.normalBias = shadowCamera.normalBias * absoluteScale;
+    camera.updateProjectionMatrix();
+  });
+
+  qrShadowScalesByRoot.set(root, absoluteScale);
 }
 
 /**
@@ -1245,6 +1299,10 @@ function startApp() {
       mesh = loadedMesh;
       // Exposing it on window is useful for inspecting transforms in dev tools.
       window.mesh = mesh;
+      var initialModelScale = mesh.userData && Number.isFinite(mesh.userData.baseUniformScale)
+        ? mesh.userData.baseUniformScale
+        : 1;
+      updateQRShadowCameras(mesh, initialModelScale);
       scene.add(mesh);
       // Initialize all nested materials to the current (normally zero) opacity.
       applyVisibilityAlpha(mesh, renderState.visibilityAlpha);
@@ -1274,10 +1332,8 @@ function startApp() {
     // WebGLRenderer turns the virtual scene into pixels in the visible canvas.
     // Alpha support is essential because the camera video must show through.
     renderer = new THREE.WebGLRenderer({canvas: canvas, alpha: true});
-    // The editor uses sRGB output and physically based light intensities. Its
-    // bundled Three.js revision enables these differently than this older build.
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.physicallyCorrectLights = true;
+    // r157 uses physical light units by default, matching the editor's renderer.
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     // Clear each frame to fully transparent black instead of an opaque backdrop.
     renderer.setClearColor( 0x000000, 0);
     applyEditorRendererSettings(renderer, importedRendererProjectSettings);
@@ -1637,6 +1693,7 @@ function startApp() {
 
             // Set X, Y, and Z equally to avoid stretching the model's proportions.
             mesh.scale.set(dynamicScale, dynamicScale, dynamicScale);
+            updateQRShadowCameras(mesh, dynamicScale);
           }
 
           // STL meshes can save the distance from their origin to a selected

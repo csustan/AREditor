@@ -1,4 +1,5 @@
 /* eslint-env worker */
+// Keep the packaged inline worker in ARnft.js synchronized with this source.
 /*
  *  Worker.ts
  *  ARnft
@@ -41,7 +42,11 @@ ctx.onmessage = (e) => {
     const msg = e.data;
     switch (msg.type) {
         case "load": {
-            load(msg);
+            load(msg).catch((error) => {
+                const message = error instanceof Error ? error.message : String(error);
+                console.error("Error initializing NFT worker:", error);
+                ctx.postMessage({ type: "error", message });
+            });
             return;
         }
         case "stop": {
@@ -59,16 +64,42 @@ let lastFrame = 0;
 let ar = null;
 let markerResult = null;
 // initialize the OneEuroFilter
-const WARM_UP_TOLERANCE = 5;
+const DEFAULT_CAMERA_NEAR = 0.1;
+const DEFAULT_CAMERA_FAR = 1000;
+const DEFAULT_FILTER_MIN_CUTOFF = 0.0001;
+const DEFAULT_FILTER_BETA = 0.01;
+const DEFAULT_WARM_UP_SAMPLES = 5;
+const THRESHOLD_MODES = {
+    manual: 0,
+    autoMedian: 1,
+    autoOtsu: 2,
+    autoAdaptive: 3,
+    autoBracketing: 4
+};
 let tickCount = 0;
 let oef;
-let filterMinCF = 0.0001;
-let filterBeta = 0.01;
-const filter = new OneEuroFilter(filterMinCF, filterBeta);
+let filterMinCF = DEFAULT_FILTER_MIN_CUTOFF;
+let filterBeta = DEFAULT_FILTER_BETA;
+let warmUpSamples = DEFAULT_WARM_UP_SAMPLES;
+let filter = new OneEuroFilter(filterMinCF, filterBeta);
+
+const readNumberSetting = (value, fallback, minimum, maximum, name) => {
+    if (value === undefined || value === null) {
+        return fallback;
+    }
+
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < minimum || number > maximum) {
+        throw new RangeError(`${name} must be a number between ${minimum} and ${maximum}.`);
+    }
+
+    return number;
+};
+
 const oefFilter = (matrixGL_RH) => {
     tickCount += 1;
     var mat;
-    if (tickCount > WARM_UP_TOLERANCE) {
+    if (tickCount > warmUpSamples) {
         mat = filter.filter(Date.now(), matrixGL_RH);
     }
     else {
@@ -81,10 +112,50 @@ const load = async (msg) => {
     let cameraParamUrl;
     let nftMarkerUrls = [];
     let markerLength = msg.marker.length;
-    oef = msg.oef;
+    const settings = msg.settings && typeof msg.settings === "object" ? msg.settings : {};
+    const cameraSettings = settings.camera && typeof settings.camera === "object" ? settings.camera : {};
+    const trackingSettings = settings.tracking && typeof settings.tracking === "object" ? settings.tracking : {};
+    const cameraNear = readNumberSetting(cameraSettings.near, DEFAULT_CAMERA_NEAR, 0.001, 1000, "camera.near");
+    const cameraFar = readNumberSetting(cameraSettings.far, DEFAULT_CAMERA_FAR, 0.01, 1000000, "camera.far");
+    if (cameraFar <= cameraNear) {
+        throw new RangeError("camera.far must be greater than camera.near.");
+    }
+
+    const threshold = readNumberSetting(trackingSettings.threshold, 100, 0, 255, "tracking.threshold");
+    if (!Number.isInteger(threshold)) {
+        throw new RangeError("tracking.threshold must be an integer.");
+    }
+
+    const thresholdModeName = trackingSettings.thresholdMode;
+    let thresholdMode = null;
+    if (thresholdModeName !== undefined && thresholdModeName !== null && thresholdModeName !== "trackerDefault") {
+        if (!Object.prototype.hasOwnProperty.call(THRESHOLD_MODES, thresholdModeName)) {
+            throw new RangeError(`Unknown NFT threshold mode: ${thresholdModeName}`);
+        }
+        thresholdMode = THRESHOLD_MODES[thresholdModeName];
+    }
+
+    filterMinCF = readNumberSetting(trackingSettings.filterMinCF, DEFAULT_FILTER_MIN_CUTOFF, 0.0001, 10, "tracking.filterMinCF");
+    filterBeta = readNumberSetting(trackingSettings.filterBeta, DEFAULT_FILTER_BETA, 0, 10, "tracking.filterBeta");
+    warmUpSamples = readNumberSetting(trackingSettings.warmUpSamples, DEFAULT_WARM_UP_SAMPLES, 0, 120, "tracking.warmUpSamples");
+    if (!Number.isInteger(warmUpSamples)) {
+        throw new RangeError("tracking.warmUpSamples must be an integer.");
+    }
+    filter = new OneEuroFilter(filterMinCF, filterBeta);
+    tickCount = 0;
+    oef = typeof trackingSettings.oef === "boolean" ? trackingSettings.oef :
+        typeof settings.oef === "boolean" ? settings.oef : msg.oef;
     console.debug("Base path:", basePath);
     const onLoad = async (arController) => {
         ar = arController;
+        ar.setProjectionNearPlane(cameraNear);
+        ar.setProjectionFarPlane(cameraFar);
+        if (thresholdMode !== null) {
+            ar.setThresholdMode(thresholdMode);
+            if (thresholdMode === THRESHOLD_MODES.manual) {
+                ar.setThreshold(threshold);
+            }
+        }
         const cameraMatrix = ar.getCameraMatrix();
         ar.addEventListener("getNFTMarker", (ev) => {
             let mat;
@@ -142,6 +213,8 @@ const load = async (msg) => {
     };
     const onError = (error) => {
         console.error(error);
+        const message = error instanceof Error ? error.message : String(error);
+        ctx.postMessage({ type: "error", message });
     };
     const regexC = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#()?&//=]*)/gim;
     const reC = regexC.test(msg.camera_para);

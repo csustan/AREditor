@@ -21,14 +21,28 @@
   <body>
     <video id="video"></video>
     <canvas id="canvas"></canvas>
-    <script src="src/libs/three/three.js"></script>
-    <script src="src/libs/STLLoader.js"></script>
-    <script src="src/libs/GLTFLoader.js"></script>
-    <script src="src/libs/LegacyJSONLoader.js"></script>
     <script src="src/libs/blueimp-md5/md5.js"></script>
     <script src="src/libs/js-aruco/src/svd.js"></script>
     <script src="src/libs/js-aruco/src/posit1.js"></script>
     <script src="src/qrclient.js"></script>
-    <script src="src/main.js"></script>
+    <script type="module">
+      import * as THREECore from './src/libs/three/three.module.js';
+      import { GLTFLoader } from './src/libs/three/addons/loaders/GLTFLoader.js';
+      import { LegacyJSONLoader } from './src/libs/three/addons/loaders/LegacyJSONLoader.js';
+      import { STLLoader } from './src/libs/three/addons/loaders/STLLoader.js';
+      import { FontLoader, Font } from './src/libs/three/addons/loaders/FontLoader.js';
+      import { TextGeometry } from './src/libs/three/addons/geometries/TextGeometry.js';
+
+      window.THREE = Object.assign({}, THREECore, {
+        Font,
+        FontLoader,
+        GLTFLoader,
+        LegacyJSONLoader,
+        STLLoader,
+        TextGeometry
+      });
+
+      await import('./src/main.js');
+    </script>
   </body>
 </html>

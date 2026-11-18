@@ -33,15 +33,14 @@ The libraries used in this project are listed in the following table -- the link
 
 | Library/component Name | Local file(s) used and location | Original source | Version/data in source | License | Purpose |
 |---|---|---|---|---|---|
-| three.js | [src/libs/three/three.js](src/libs/three/three.js) | [three.js GitHub](https://github.com/mrdoob/three.js) | Source contains `REVISION = '132'` | MIT (three.js standard license) | Core 3D scene, camera, mesh, text, and animation rendering |
+| three.js core | [src/libs/three/three.module.js](src/libs/three/three.module.js) | [three.js GitHub](https://github.com/mrdoob/three.js) | `REVISION = '157'`; copied from the editor build | MIT (three.js standard license) | Core 3D scene, camera, mesh, and animation rendering |
 | AR.js + jsartoolkit5 marker stack | Removed from this lightweight copy (legacy files were previously under scripts/js) | [AR.js GitHub](https://github.com/AR-js-org/AR.js) and [jsartoolkit5 GitHub](https://github.com/artoolkitx/jsartoolkit5) | N/A in this copy | AR.js/jsartoolkit5 upstream license terms (commonly LGPL-3.0/BSD-style components, depending on upstream submodule) | Legacy marker-based AR pipeline (not used by the current QR runtime) |
 | JavaScript MD5 (blueimp) | [src/libs/blueimp-md5/md5.js](src/libs/blueimp-md5/md5.js) | [blueimp JavaScript-MD5 GitHub](https://github.com/blueimp/JavaScript-MD5) | Header shows Copyright 2011; includes reference to Paul Johnston implementation (`Version 2.2`, 1999-2009) | MIT (with historical BSD attribution in header comments) | Utility library |
 | js-aruco POS (pose estimation) | [src/libs/js-aruco/src/posit1.js](src/libs/js-aruco/src/posit1.js), [src/libs/js-aruco/src/svd.js](src/libs/js-aruco/src/svd.js) | [js-aruco GitHub (Juan Mellado)](https://github.com/jcmellado/js-aruco) | Headers show Copyright 2012 | MIT | Used for pose estimation in [src/main.js](src/main.js) |
 | jsqrcode decoder stack (software QR fallback) | [scripts/jsqrcode](scripts/jsqrcode) | [LazarSoft jsqrcode GitHub](https://github.com/LazarSoft/jsqrcode) and [ZXing GitHub](https://github.com/zxing/zxing) | Headers show `Copyright 2011 Lazar Laszlo` and multiple files with `Copyright 2007 ZXing authors` | Apache License 2.0 | Loaded inside worker via [scripts/jsqrcode/qrworker.js](scripts/jsqrcode/qrworker.js) for fallback QR decoding |
 | Material Design Lite runtime (UI helper) | [src/libs/material.js](src/libs/material.js) | [Material Design Lite GitHub](https://github.com/google/material-design-lite) and [cdnjs source used in file header](https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.js) | File header references version `1.3.0` source URL | Apache License 2.0 | Local copy loaded by [index.html](index.html), replacing previous CDN dependency |
-| GLTFLoader (GLTF 2.0 format) | [src/libs/GLTFLoader.js](src/libs/GLTFLoader.js) | [three.js examples](https://github.com/mrdoob/three.js/blob/master/examples/js/loaders/GLTFLoader.js) | Loaded from Three.js examples | MIT | Supports `.gltf` and `.glb` (binary) model files; called by [src/main.js](src/main.js) based on file extension |
-| STLLoader (binary & ASCII STL format) | [src/libs/STLLoader.js](src/libs/STLLoader.js) | [three.js examples](https://github.com/mrdoob/three.js/blob/master/examples/js/loaders/STLLoader.js) | Loaded from Three.js examples | MIT | Supports `.stl` model files (Stereolithography/CAD format); called by [src/main.js](src/main.js) based on file extension |
-| LegacyJSONLoader (Three.js JSON format) | [src/libs/LegacyJSONLoader.js](src/libs/LegacyJSONLoader.js) | [three.js examples](https://github.com/mrdoob/three.js/blob/master/examples/js/loaders/LegacyJSONLoader.js) | Loaded from Three.js examples | MIT | Supports `.json` model files (legacy Three.js JSON format); includes embedded materials and geometry; called by [src/main.js](src/main.js) based on file extension |
+| Three.js r157 addons | [src/libs/three/addons/loaders](src/libs/three/addons/loaders), [src/libs/three/addons/geometries/TextGeometry.js](src/libs/three/addons/geometries/TextGeometry.js), [src/libs/three/addons/utils/BufferGeometryUtils.js](src/libs/three/addons/utils/BufferGeometryUtils.js) | [three.js r157 examples](https://github.com/mrdoob/three.js/tree/r157/examples/jsm) | Vendored locally; imports resolve to the QR template's own core | MIT | Local GLTF, STL, font, text-geometry, and geometry utility modules |
+| LegacyJSONLoader (Three.js JSON format) | [src/libs/three/addons/loaders/LegacyJSONLoader.js](src/libs/three/addons/loaders/LegacyJSONLoader.js) | [Three.js legacy JSON format](https://github.com/mrdoob/three.js/tree/r157) | Local compatibility loader producing r157 `BufferGeometry` | MIT | Supports legacy geometry JSON and its materials without removed `Geometry` APIs |
 
 ### Browser APIs used (not third-party libraries)
 
@@ -83,16 +82,19 @@ Local QR decoding implementation (self-contained fallback path).
 - [src/libs/js-aruco/src/posit1.js](src/libs/js-aruco/src/posit1.js)
 Takes QR corner points and calculates 3D pose (translation + rotation).
 
-- [src/libs/three/three.js](src/libs/three/three.js)
+- [src/libs/three/three.module.js](src/libs/three/three.module.js)
 Draws the 3D scene (camera, cube, text, lights) in WebGL.
 
-- [src/libs/GLTFLoader.js](src/libs/GLTFLoader.js), [src/libs/STLLoader.js](src/libs/STLLoader.js), [src/libs/LegacyJSONLoader.js](src/libs/LegacyJSONLoader.js)
-Three.js loaders for different model formats. The active loader is selected in [src/main.js](src/main.js) based on the model file extension (`.gltf` / `.glb` / `.stl` / `.json`).
+- [src/libs/three/three.module.js](src/libs/three/three.module.js)
+The local Three.js r157 core used by the QR application.
+
+- [src/libs/three/addons/loaders](src/libs/three/addons/loaders), [src/libs/three/addons/geometries/TextGeometry.js](src/libs/three/addons/geometries/TextGeometry.js), [src/libs/three/addons/utils/BufferGeometryUtils.js](src/libs/three/addons/utils/BufferGeometryUtils.js)
+Local r157 addons for the model formats and text geometry. The active model loader is selected in [src/main.js](src/main.js) based on the file extension (`.gltf` / `.glb` / `.stl` / `.json`).
 
 ### Runtime flow (step by step)
 
 1. Page load
-`index.html` loads scripts and the browser creates the `<video>` and `<canvas>` elements.
+`index.html` loads the local QR helpers, imports the Three.js r157 core and addons, then starts [src/main.js](src/main.js) as a module.
 
 2. Camera setup
 `main.js` asks for webcam permission using `getUserMedia`, then starts video playback.
@@ -268,6 +270,8 @@ There are two layers of configuration:
 1. **`DEFAULT_APP_CONFIG`** in [src/main.js](src/main.js) — hardcoded fallback values baked into the app. These apply if [src/config/render-config.json](src/config/render-config.json) fails to load, and any field that config file omits.
 2. **[src/config/render-config.json](src/config/render-config.json)** — the shipped runtime config, fetched at startup and deep-merged on top of `DEFAULT_APP_CONFIG` (its values win where both define the same field). This file also defines several fields that have no fallback in `DEFAULT_APP_CONFIG` (noted below as **config-only**); those features are unavailable if the file fails to load.
 
+When publishing from the editor, QR sidebar values override matching fields in the generated config. Its model-scale defaults are tuned for the supplied editor scene; the bundled GLB template keeps its own fallback scale values.
+
 Values below are shown as `main.js default` / `render-config.json value` when they differ.
 
 ### tracking
@@ -276,7 +280,7 @@ Values below are shown as `main.js default` / `render-config.json value` when th
 - `tracking.qrLostGraceMs` — how long (ms) the overlay stays visible after the QR code disappears. Default/value: `200`.
 - `tracking.scanIntervalMs` — minimum delay between decode attempts; `0` decodes every frame. Default/value: `0`.
 - `tracking.poseUpdateIntervalMs` — minimum delay between applied pose updates; `0` applies every decoded frame. Default/value: `0`.
-- `tracking.detectionConfidenceHoldMs` — how long the last good pose is kept across missed decode frames before hiding. `900` / `300`.
+- `tracking.detectionConfidenceHoldMs` — how long the last good pose is kept across missed decode frames before hiding. `900` / `1500`.
 - `tracking.maxCameraSize` — max camera dimension fed into QR decoding before downscaling; lower is faster but less accurate. `800` / `960`.
 - `tracking.trackMatchingQRCodeData` — exact, case-sensitive QR payload to track. An empty string accepts the decoder's normal first result. Default/value: `""`.
 
@@ -297,10 +301,10 @@ Not present in `DEFAULT_APP_CONFIG`; only available when `render-config.json` lo
 
 - `render.model.path` — path to the model file served by the web server. Supported formats: `.stl`, `.gltf`, `.glb`, `.json`.
 - `render.model.jsonMode` — JSON loader mode: `"auto"` detects legacy vs. object format; force with `"object"` or `"legacy"`.
-- `render.model.modelUnitScale` — treats 1 model unit as this many QR widths; tune when a model's authored units don't match the AR.js convention.
-- `render.model.scale` — overall model scale, where `1` unit equals the QR code width (AR.js convention).
+- `render.model.modelUnitScale` — unit multiplier applied before `render.model.scale`; the editor QR publish default is `1` for native App JSON scene units.
+- `render.model.scale` — additional uniform multiplier. The editor QR publish default `260.65` targets one QR width for the supplied scene, not arbitrary models.
 - `render.model.placement.mode` — `"origin"` keeps the artist pivot, `"bbox"` centers X/Y and anchors Z to the bounding box, `"originXY_bboxZ"` is a hybrid of the two.
-- `render.model.placement.bboxZFace` — `"max"` or `"min"`; which bounding-box Z face touches the marker plane (used by `"bbox"`/`"originXY_bboxZ"` modes).
+- `render.model.placement.bboxZFace` — `"min"` or `"max"`; which corrected Z face touches the marker plane (used by `"bbox"`/`"originXY_bboxZ"` modes). The default `"min"` anchors the base of editor App JSON and Y-up GLB scenes after their `+PI/2` X-axis correction.
 - `render.model.positionOffset.x/y/z` — extra position offset added on top of the QR pose translation.
 - `render.model.rotationOffset.x/y/z` — extra rotation (radians) added on top of the QR pose; e.g. `-1.5708` (`-PI/2`) aligns a Y-up model so the QR acts as ground plane.
 - `render.model.fadeEnabled` — master toggle for visibility fade; `false` shows/hides the model instantly instead of fading.
@@ -558,6 +562,8 @@ base scale = (unit scale / pose.translationScaleX) * render.model.scale
 
 `unit scale` comes from `render.model.modelUnitScale` when that field is present. That override applies to every model format. If it is omitted, the loader uses `tracking.qrSizeMillis` for glTF/GLB and `1` for STL/JSON. The current config explicitly sets `modelUnitScale`, so its value takes precedence over those format defaults.
 
+For the supplied editor scene, the corrected X width is about `7.673` units. With `modelUnitScale: 1`, `translationScaleX: 2`, and `render.model.scale: 260.65`, its base width is about `1000` tracking units (one configured QR width). Its corrected Z depth is about `8.233` units, so at this scale it extends slightly beyond the default camera Z of `1000` when the marker plane is at Z=0. Close poses or dynamic scaling can clip part of the model; reduce Model Scale if that occurs.
+
 When `pose.sizeBasedScaling.enabled` is `true`, the app measures the average QR edge length in pixels. It divides that measurement by `referenceEdgePx` to produce a dynamic multiplier, clamps it between `minMultiplier` and `maxMultiplier`, and smooths it. With `referenceEdgePx: 0`, the first valid tracked frame becomes the baseline multiplier of `1`.
 
 The final rendered scale is approximately:
@@ -686,7 +692,7 @@ glTF, GLB, and Object JSON support all three placement modes:
 - `bbox`: centers the post-normalization bounding box in X/Y and moves the selected Z face to the QR plane. This is the easiest starting point for arbitrary assets.
 - `originXY_bboxZ`: preserves the authored X/Y pivot but moves the selected bounding-box Z face to the QR plane.
 
-`bboxZFace` chooses `"max"` or `"min"`. Which face acts like the bottom depends on the source axis convention and the tracker's normalization. If a model is anchored upside down, try the other face before adding a large Z offset.
+`bboxZFace` chooses `"max"` or `"min"` after axis conversion. Editor App JSON and Y-up GLB scenes receive a `+PI/2` X rotation, so their positive-Y base becomes the min Z face. Y-up `.gltf` scenes receive `-PI/2`, so their base is typically the max Z face. Other Object JSON may use a different axis convention; choose the face that represents the intended contact surface.
 
 STL and legacy JSON do not share the full placement-mode implementation, as described in their format sections. A setting can be valid in the config without being used identically by every loader.
 
@@ -722,7 +728,7 @@ An unknown extension is sent through the STL path by the current implementation,
 
 ### The model is far too large or small
 
-First inspect `modelUnitScale`. Because it overrides format defaults globally, a value chosen for normalized glTF can be inappropriate for an STL exported in millimeters. Then inspect `render.model.scale`, `translationScaleX`, and dynamic size scaling. Temporarily set `pose.sizeBasedScaling.enabled` to `false` to separate import scale from tracking scale.
+First inspect `modelUnitScale`. Because it overrides format defaults globally, a value chosen for normalized glTF can be inappropriate for an STL exported in millimeters. Then inspect `render.model.scale`, `translationScaleX`, and dynamic size scaling. A reversed `bboxZFace` can also put the model several QR widths behind the marker, making it appear small and shift opposite to the marker during rotation. Temporarily set `pose.sizeBasedScaling.enabled` to `false` to separate import scale from tracking scale.
 
 ### The model is sideways or upside down
 
@@ -730,7 +736,7 @@ Models whose paths end in `.gltf` receive an automatic `-PI/2` X rotation. GLB m
 
 ### The model floats above or cuts through the QR plane
 
-For glTF/GLB/Object JSON, try `bbox`, then switch `bboxZFace`. For STL, switch the Z face and inspect its authored origin. For legacy JSON, remember that `geometry.center()` puts the bounding-box center at the pose; a Z offset is usually necessary for a model intended to stand on the marker.
+For editor App JSON and Y-up GLB, start with `bbox` and `bboxZFace: "min"`; for Y-up `.gltf`, start with `"max"`. For other Object JSON, inspect the corrected bounds and select the intended contact face. For STL, switch the Z face and inspect its authored origin. For legacy JSON, remember that `geometry.center()` puts the bounding-box center at the pose; a Z offset is usually necessary for a model intended to stand on the marker.
 
 ### The model is black or flat-looking
 

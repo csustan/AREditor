@@ -21,9 +21,9 @@
    * reused for every camera frame instead of creating a costly worker per frame.
    */
   function QRClient() {
-    // A Web Worker executes qrworker.js away from the browser's main thread.
-    // The leading slash makes this path relative to the web server's root.
-    var worker = new Worker('/scripts/jsqrcode/qrworker.js');
+    // Resolve the worker from the page directory so the ZIP also works from a
+    // hosted subdirectory.
+    var worker = new Worker('scripts/jsqrcode/qrworker.js');
 
     // Decoding is asynchronous: the answer arrives after `decode` has returned.
     // Save the caller's function here so `worker.onmessage` can call it later.

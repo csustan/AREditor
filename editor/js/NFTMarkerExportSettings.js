@@ -8,9 +8,25 @@ const NFT_MARKER_EXPORT_DEFAULTS = {
 	facingMode: 'environment',
 	targetFrameRate: 30,
 	cameraParametersUrl: 'Data/camera_para.dat',
+	cameraNear: 0.1,
+	cameraFar: 1000,
+	thresholdMode: 'trackerDefault',
+	threshold: 100,
 	oef: true,
+	filterMinCF: 0.0001,
+	filterBeta: 0.01,
+	warmUpSamples: 5,
 	showStats: false
 };
+
+const NFT_MARKER_THRESHOLD_MODES = new Set( [
+	'trackerDefault',
+	'manual',
+	'autoMedian',
+	'autoOtsu',
+	'autoAdaptive',
+	'autoBracketing'
+] );
 
 const NFT_MARKER_EXPORT_CONFIG_KEYS = {
 	trackingWidth: 'project/nftMarkerApp/tracking/width',
@@ -22,7 +38,14 @@ const NFT_MARKER_EXPORT_CONFIG_KEYS = {
 	facingMode: 'project/nftMarkerApp/video/facingMode',
 	targetFrameRate: 'project/nftMarkerApp/video/targetFrameRate',
 	cameraParametersUrl: 'project/nftMarkerApp/cameraParametersUrl',
+	cameraNear: 'project/nftMarkerApp/camera/near',
+	cameraFar: 'project/nftMarkerApp/camera/far',
+	thresholdMode: 'project/nftMarkerApp/tracking/thresholdMode',
+	threshold: 'project/nftMarkerApp/tracking/threshold',
 	oef: 'project/nftMarkerApp/tracking/oef',
+	filterMinCF: 'project/nftMarkerApp/tracking/filterMinCF',
+	filterBeta: 'project/nftMarkerApp/tracking/filterBeta',
+	warmUpSamples: 'project/nftMarkerApp/tracking/warmUpSamples',
 	showStats: 'project/nftMarkerApp/stats/show'
 };
 
@@ -41,6 +64,17 @@ function normalizeNFTMarkerExportSettings( settings = {} ) {
 	const cameraParametersUrl = typeof settings.cameraParametersUrl === 'string' && settings.cameraParametersUrl.trim() !== ''
 		? settings.cameraParametersUrl.trim()
 		: NFT_MARKER_EXPORT_DEFAULTS.cameraParametersUrl;
+	const cameraNear = clampNumber( settings.cameraNear, NFT_MARKER_EXPORT_DEFAULTS.cameraNear, 0.001, 1000 );
+	const cameraFar = Math.max(
+		cameraNear + 0.01,
+		clampNumber( settings.cameraFar, NFT_MARKER_EXPORT_DEFAULTS.cameraFar, 0.01, 1000000 )
+	);
+	const rawThresholdMode = settings.thresholdMode === undefined || settings.thresholdMode === null
+		? NFT_MARKER_EXPORT_DEFAULTS.thresholdMode
+		: String( settings.thresholdMode );
+	const thresholdMode = NFT_MARKER_THRESHOLD_MODES.has( rawThresholdMode )
+		? rawThresholdMode
+		: NFT_MARKER_EXPORT_DEFAULTS.thresholdMode;
 
 	return {
 		trackingWidth: Math.round( clampNumber( settings.trackingWidth, NFT_MARKER_EXPORT_DEFAULTS.trackingWidth, 1, 7680 ) ),
@@ -52,7 +86,14 @@ function normalizeNFTMarkerExportSettings( settings = {} ) {
 		facingMode,
 		targetFrameRate: Math.round( clampNumber( settings.targetFrameRate, NFT_MARKER_EXPORT_DEFAULTS.targetFrameRate, 1, 120 ) ),
 		cameraParametersUrl,
+		cameraNear,
+		cameraFar,
+		thresholdMode,
+		threshold: Math.round( clampNumber( settings.threshold, NFT_MARKER_EXPORT_DEFAULTS.threshold, 0, 255 ) ),
 		oef: typeof settings.oef === 'boolean' ? settings.oef : NFT_MARKER_EXPORT_DEFAULTS.oef,
+		filterMinCF: clampNumber( settings.filterMinCF, NFT_MARKER_EXPORT_DEFAULTS.filterMinCF, 0.0001, 10 ),
+		filterBeta: clampNumber( settings.filterBeta, NFT_MARKER_EXPORT_DEFAULTS.filterBeta, 0, 10 ),
+		warmUpSamples: Math.round( clampNumber( settings.warmUpSamples, NFT_MARKER_EXPORT_DEFAULTS.warmUpSamples, 0, 120 ) ),
 		showStats: typeof settings.showStats === 'boolean' ? settings.showStats : NFT_MARKER_EXPORT_DEFAULTS.showStats
 	};
 
@@ -122,6 +163,18 @@ function createNFTMarkerExportConfig( settings ) {
 		},
 		stats: {
 			createHtml: normalizedSettings.showStats
+		},
+		camera: {
+			near: normalizedSettings.cameraNear,
+			far: normalizedSettings.cameraFar
+		},
+		tracking: {
+			thresholdMode: normalizedSettings.thresholdMode,
+			threshold: normalizedSettings.threshold,
+			oef: normalizedSettings.oef,
+			filterMinCF: normalizedSettings.filterMinCF,
+			filterBeta: normalizedSettings.filterBeta,
+			warmUpSamples: normalizedSettings.warmUpSamples
 		},
 		oef: normalizedSettings.oef
 	};

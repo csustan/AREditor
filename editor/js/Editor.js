@@ -102,6 +102,7 @@ function Editor() {
 		viewportShadingChanged: new Signal(),
 		viewportLightingPreviewChanged: new Signal(),
 		viewportMarkerPreviewChanged: new Signal(),
+		viewportMarkerRulerChanged: new Signal(),
 		markerStateChanged: new Signal(),
 		nftMarkerChanged: new Signal(),
 		qrCodeMarkerChanged: new Signal(),
@@ -144,6 +145,31 @@ function Editor() {
 	this.viewportShading = 'default';
 	this.viewportLightingPreview = this.config.getKey( 'settings/viewport/lightingPreview' ) || 'off';
 	this.viewportMarkerPreview = this.config.getKey( 'settings/viewport/markerPreview' ) || 'off';
+	this.viewportMarkerRulerEnabled = this.config.getKey( 'settings/viewport/markerRulerEnabled' ) === true;
+
+	const savedMarkerWidthCm = this.config.getKey( 'settings/viewport/markerWidthCm' );
+	const savedMarkerWidthMm = this.config.getKey( 'settings/viewport/markerWidthMm' );
+	const hasSavedMarkerWidthCm = ( typeof savedMarkerWidthCm === 'string' || typeof savedMarkerWidthCm === 'number' ) &&
+		String( savedMarkerWidthCm ).trim() !== '';
+	this.viewportMarkerWidthCm = hasSavedMarkerWidthCm ? String( savedMarkerWidthCm ) : '';
+
+	if ( savedMarkerWidthMm !== undefined && savedMarkerWidthMm !== null ) {
+
+		if ( ! hasSavedMarkerWidthCm ) {
+
+			const legacyMarkerWidthMmText = String( savedMarkerWidthMm ).trim();
+			const legacyMarkerWidthMm = legacyMarkerWidthMmText === '' ? NaN : Number( legacyMarkerWidthMmText );
+
+			if ( Number.isFinite( legacyMarkerWidthMm ) ) this.viewportMarkerWidthCm = String( legacyMarkerWidthMm / 10 );
+
+		}
+
+		this.config.setKey(
+			'settings/viewport/markerWidthCm', this.viewportMarkerWidthCm,
+			'settings/viewport/markerWidthMm', null
+		);
+
+	}
 
 	this.addCamera( this.camera );
 
@@ -583,6 +609,22 @@ Editor.prototype = {
 		this.viewportMarkerPreview = value;
 		this.config.setKey( 'settings/viewport/markerPreview', value );
 		this.signals.viewportMarkerPreviewChanged.dispatch();
+
+	},
+
+	setViewportMarkerRulerEnabled: function ( value ) {
+
+		this.viewportMarkerRulerEnabled = value === true;
+		this.config.setKey( 'settings/viewport/markerRulerEnabled', this.viewportMarkerRulerEnabled );
+		this.signals.viewportMarkerRulerChanged.dispatch();
+
+	},
+
+	setViewportMarkerWidthCm: function ( value ) {
+
+		this.viewportMarkerWidthCm = String( value ?? '' );
+		this.config.setKey( 'settings/viewport/markerWidthCm', this.viewportMarkerWidthCm );
+		this.signals.viewportMarkerRulerChanged.dispatch();
 
 	},
 

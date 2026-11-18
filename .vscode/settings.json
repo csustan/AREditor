@@ -1,3 +1,12 @@
 {
-    "liveServer.settings.port": 5501
+    "liveServer.settings.port": 5501,
+    "chat.tools.terminal.autoApprove": {
+        "awk": true,
+        "uniq": true,
+        "printf": true,
+        "/^node -e 'const fs=require\\(\"fs\"\\); const p=\"editor/files/ARNFTExportFiles/js/third_party/ARnft\\.js\"; const s=fs\\.readFileSync\\(p,\"utf8\"\\); console\\.log\\(\"ARnft\\.js bytes:\",s\\.length,\"lines:\",s\\.split\\(\"\\\\n\"\\)\\.length\\); for\\(const needle of \\[\"oef\", \"initialize\\(cameraURL\", \"camera_para\", \"class NFTWorker\", \"ARControllerNFT\\.initWithDimensions\"\\]\\) \\{ let pos=-1, count=0; while\\(\\(pos=s\\.indexOf\\(needle,pos\\+1\\)\\)>=0 && count\\+\\+<8\\) console\\.log\\(\"\\\\n---\",needle,\"at\",pos,\"---\\\\n\"\\+s\\.slice\\(Math\\.max\\(0,pos-180\\),Math\\.min\\(s\\.length,pos\\+280\\)\\)\\.replace\\(/\\\\\\\\n/g,\"\\\\n\"\\)\\); \\}'$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }

@@ -4,7 +4,7 @@
     "qrLostGraceMs": 200, // Keep overlay visible this long after QR disappears (milliseconds).
     "scanIntervalMs": 0, // Minimum delay between decode attempts; 0 means attempt every frame.
     "poseUpdateIntervalMs": 0, // Minimum delay between visible pose updates; 0 means apply every decoded frame.
-    "detectionConfidenceHoldMs": 300, // Keep last good pose this long across missed decode frames before hiding.
+    "detectionConfidenceHoldMs": 1500, // Keep last good pose this long across missed decode frames before hiding.
     "maxCameraSize": 960, // Max camera dimension used for QR decode input before downscaling for performance.
     "trackMatchingQRCodeData": "" // Exact QR data to track; empty string keeps the standard first-detected QR behavior.
   },
@@ -17,15 +17,15 @@
       "z": 1000 // Camera position on Z axis.
     },
     "model": {
-      "path": "models/StanStateSheildTest.glb", // Path to model file served by your web server. Supported formats: .stl, .gltf, .glb, .json      // modelUnitScale: 1 GLB unit = 1 QR width by default. Override only if your model uses different units.
+      "path": "models/StanStateSheildTest.glb", // Path to the bundled template model. Editor QR exports replace this with the exported scene path.
       "jsonMode": "auto", // JSON loader mode: "auto" detects editor/app vs legacy; set "object" or "legacy" to force behavior.
-      "modelUnitScale": 1000, // This STL appears authored in normalized units; treat 1 model unit as 1 QR width.
-      "scale": 1, // AR.js convention: 1 GLB unit = 1 QR code width. A 0.5-unit cube appears at half the QR size.
+      "modelUnitScale": 1000, // Unit multiplier for the bundled GLB template; editor QR exports use the sidebar setting.
+      "scale": 1, // Additional scale multiplier for the bundled GLB template; editor QR exports use the sidebar setting.
       "placement": {
         // "mode": "origin", // Old mode for quick comparison (artist pivot preserved).
         // "mode": "originXY_bboxZ", // Hybrid mode: keep artist X/Y pivot, but auto-anchor Z to bbox face.
         "mode": "bbox", // Active mode: centers model bounds in X/Y + bbox Z anchoring.
-        "bboxZFace": "max" // Used by mode="bbox" and mode="originXY_bboxZ": choose "max" or "min" Z face for marker-plane contact.
+        "bboxZFace": "min" // Editor App JSON and Y-up GLB models use +PI/2 X correction, so the base is the min Z face.
       },
       "positionOffset": {
         "x": 0, // Extra X position offset applied on top of QR pose translation.

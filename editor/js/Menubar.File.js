@@ -51,14 +51,17 @@ const AR_QR_CODE_EXPORT_FILES = [
 	'scripts/jsqrcode/rsdecoder.js',
 	'scripts/jsqrcode/version.js',
 	'src/fonts/optimer_regular.typeface.json',
-	'src/libs/GLTFLoader.js',
-	'src/libs/LegacyJSONLoader.js',
-	'src/libs/STLLoader.js',
 	'src/libs/blueimp-md5/md5.js',
 	'src/libs/js-aruco/src/posit1.js',
 	'src/libs/js-aruco/src/svd.js',
 	'src/libs/material.js',
-	'src/libs/three/three.js',
+	'src/libs/three/three.module.js',
+	'src/libs/three/addons/geometries/TextGeometry.js',
+	'src/libs/three/addons/loaders/FontLoader.js',
+	'src/libs/three/addons/loaders/GLTFLoader.js',
+	'src/libs/three/addons/loaders/LegacyJSONLoader.js',
+	'src/libs/three/addons/loaders/STLLoader.js',
+	'src/libs/three/addons/utils/BufferGeometryUtils.js',
 	'src/main.js',
 	'src/qrclient.js'
 ];
@@ -1392,6 +1395,8 @@ async function publishARNFTApp() {
 			content = content.replace('/* NFT_TRACKING_WIDTH */ 640', String( nftExportSettings.trackingWidth ) );
 			content = content.replace('/* NFT_TRACKING_HEIGHT */ 480', String( nftExportSettings.trackingHeight ) );
 			content = content.replace('/* NFT_SHOW_STATS */ false', String( nftExportSettings.showStats ) );
+			content = content.replace('/* NFT_CAMERA_NEAR */ 0.1', String( nftExportSettings.cameraNear ) );
+			content = content.replace('/* NFT_CAMERA_FAR */ 1000', String( nftExportSettings.cameraFar ) );
 
 			const modelNameToInsert = `fetch('./Data/app.json')
 							.then(function(r) { return r.json(); })
@@ -1400,8 +1405,10 @@ async function publishARNFTApp() {
 								var loadedScene = objectLoader.parse(json.scene);
 								// ObjectLoader gives each light a fresh default target, so reconnect the exported one.
 								restoreTrackedLightTargets(loadedScene);
-								loadedScene.scale.set(80, 80, 80);
+								const nftSceneScale = 80;
+								loadedScene.scale.set(nftSceneScale, nftSceneScale, nftSceneScale);
 								loadedScene.rotation.x = Math.PI / 2;
+								scaleShadowCamerasForSceneScale(loadedScene, nftSceneScale);
 								nftAddTJS.add(loadedScene, 'generatedMarkerFile', false);
 								loadedScene.traverse(function(object) {
 									if (object.animations && object.animations.length > 0) {

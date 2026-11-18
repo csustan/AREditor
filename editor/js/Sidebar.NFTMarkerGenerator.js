@@ -552,12 +552,12 @@ function SidebarNFTMarkerGenerator(editor) {
 
 	}
 
-	function addRuntimeNumberSetting( settingName, labelText, minimum, maximum, infoText ) {
+	function addRuntimeNumberSetting( settingName, labelText, minimum, maximum, infoText, step = 1, precision = 0 ) {
 
 		const control = new UINumber();
-		control.setPrecision( 0 );
+		control.setPrecision( precision );
 		control.setRange( minimum, maximum );
-		control.setStep( 1 );
+		control.setStep( step );
 		control.setWidth( '90px' );
 		control.onChange( saveRuntimeControlValues );
 		runtimeControls[ settingName ] = control;
@@ -616,12 +616,67 @@ function SidebarNFTMarkerGenerator(editor) {
 		'Path to the camera calibration file inside the published app. The default file is included automatically.'
 	);
 
+	activeImagePanel.add( new UIHorizontalRule() );
+
+	const trackerSettingsHeader = new UIText( 'Tracker Fine-Tuning' );
+	trackerSettingsHeader.dom.style.display = 'block';
+	trackerSettingsHeader.setMarginBottom( '8px' );
+	activeImagePanel.add( trackerSettingsHeader );
+
+	addRuntimeNumberSetting(
+		'cameraNear', 'Projection Near', 0.001, 1000,
+		'Near clipping plane used by NFT projection. It must stay above 0 and below Projection Far.',
+		0.01, 3
+	);
+	addRuntimeNumberSetting(
+		'cameraFar', 'Projection Far', 0.01, 1000000,
+		'Far clipping plane used by NFT projection. It must be greater than Projection Near.',
+		10, 2
+	);
+
+	const thresholdModeControl = new UISelect();
+	thresholdModeControl.setWidth( '160px' );
+	thresholdModeControl.setOptions( {
+		trackerDefault: 'Tracker Default',
+		manual: 'Manual',
+		autoMedian: 'Auto Median',
+		autoOtsu: 'Auto Otsu',
+		autoAdaptive: 'Auto Adaptive',
+		autoBracketing: 'Auto Bracketing'
+	} );
+	thresholdModeControl.onChange( saveRuntimeControlValues );
+	runtimeControls.thresholdMode = thresholdModeControl;
+	addRuntimeSettingRow(
+		'Threshold Mode', thresholdModeControl,
+		'ARToolKit image-binarization mode. NFT feature tracking may not use square-marker thresholding; leave Tracker Default unless testing this option. Auto Adaptive can be more CPU-intensive.'
+	);
+
+	addRuntimeNumberSetting(
+		'threshold', 'Threshold', 0, 255,
+		'Manual image threshold from 0 to 255. Used only in Manual mode and may be ignored by NFT feature tracking.'
+	);
+
 	const oefControl = new UICheckbox();
 	oefControl.onChange( saveRuntimeControlValues );
 	runtimeControls.oef = oefControl;
 	addRuntimeSettingRow(
 		'Matrix Filtering', oefControl,
 		'Applies orientation-estimation filtering to reduce pose jitter in the published app.'
+	);
+
+	addRuntimeNumberSetting(
+		'filterMinCF', 'Filter Min Cutoff', 0.0001, 10,
+		'Baseline One Euro Filter cutoff. Lower values smooth more but add lag. Used only when Matrix Filtering is enabled.',
+		0.0001, 4
+	);
+	addRuntimeNumberSetting(
+		'filterBeta', 'Filter Beta', 0, 10,
+		'Higher values reduce smoothing during fast movement, lowering lag but allowing more jitter. Used only when Matrix Filtering is enabled.',
+		0.001, 3
+	);
+	addRuntimeNumberSetting(
+		'warmUpSamples', 'Warm-up Samples', 0, 120,
+		'Number of initial tracked poses passed through without smoothing. Used only when Matrix Filtering is enabled.'
 	);
 
 	const showStatsControl = new UICheckbox();

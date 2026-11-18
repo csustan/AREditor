@@ -120,6 +120,8 @@ File > Publish AR NFT App
 The exported ZIP file contains a complete AR website ready for deployment on GitHub Pages, Netlify, Vercel, or any static web host.
 
 You can use the NFT Marker Generator or Marker Generator tabs to create your own markers before exporting your App.
+The NFT Marker Generator's published-app settings include projection near/far planes and pose-smoothing controls. ARToolKit threshold settings are also available for testing, though NFT feature tracking may not use them.
+For NFT shadows, enable project shadows, enable Cast Shadow on the light, and enable Receive Shadow on the surface that should display the shadow.
 
 ---
 

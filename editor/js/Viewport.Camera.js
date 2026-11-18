@@ -9,7 +9,7 @@ function ViewportCamera( editor ) {
 	const select = new UISelect();
 	select.setId( 'viewport-camera-select' );
 	select.setPosition( 'absolute' );
-	select.setRight( '550px' );
+	select.setRight( '350px' );
 	select.setTop( '10px' );
 	select.onChange( function () {
 

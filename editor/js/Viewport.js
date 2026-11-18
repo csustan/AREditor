@@ -9,6 +9,7 @@ import { EditorControls } from './EditorControls.js';
 import { ViewportCamera } from './Viewport.Camera.js';
 import { ViewportShading } from './Viewport.Shading.js';
 import { ViewportInfo } from './Viewport.Info.js';
+import { createMarkerRuler, updateMarkerRulerLabels } from './MarkerRuler.js';
 import './ARMarkerPreview.js';
 import './NFTMarkerPreview.js';
 import './QRCodeMarkerPreview.js';
@@ -44,7 +45,6 @@ function Viewport( editor ) {
 
 	let renderer = null;
 	let pmremGenerator = null;
-	let rendererDefaultOutputEncoding;
 	let rendererDefaultOutputColorSpace;
 	let rendererDefaultUseLegacyLights;
 	let isDarkMode = false;
@@ -55,20 +55,22 @@ function Viewport( editor ) {
 
 		const lightingPreview = editor.viewportLightingPreview;
 		let outputColorSpace = rendererDefaultOutputColorSpace;
-		let outputEncoding = rendererDefaultOutputEncoding;
 		let useLegacyLights = rendererDefaultUseLegacyLights;
 
 		switch ( lightingPreview ) {
 
 			case 'nft':
 				outputColorSpace = THREE.SRGBColorSpace;
-				outputEncoding = THREE.sRGBEncoding;
 				useLegacyLights = true;
+				break;
+
+			case 'qr':
+				outputColorSpace = THREE.SRGBColorSpace;
+				useLegacyLights = false;
 				break;
 
 			case 'ar':
 				outputColorSpace = 'LinearSRGBColorSpace' in THREE ? THREE.LinearSRGBColorSpace : rendererDefaultOutputColorSpace;
-				outputEncoding = THREE.LinearEncoding;
 				useLegacyLights = true;
 				break;
 
@@ -81,12 +83,6 @@ function Viewport( editor ) {
 		if ( outputColorSpace !== undefined && 'outputColorSpace' in renderer && THREE.SRGBColorSpace !== undefined ) {
 
 			renderer.outputColorSpace = outputColorSpace;
-
-		}
-
-		if ( outputEncoding !== undefined && renderer.outputEncoding !== undefined ) {
-
-			renderer.outputEncoding = outputEncoding;
 
 		}
 
@@ -118,8 +114,12 @@ function Viewport( editor ) {
 	const camera = editor.camera;
 	const scene = editor.scene;
 	const sceneHelpers = editor.sceneHelpers;
+	const markerRuler = createMarkerRuler();
+	const markerRulerPosition = new THREE.Vector3();
+	sceneHelpers.add( markerRuler );
 	let showSceneHelpers = true;
 	let applyingViewportMarkerPreview = false;
+	let activeMarkerPreviewForRuler = null;
 
 	function markerPreviewUpdated( markerPreview ) {
 
@@ -140,6 +140,43 @@ function Viewport( editor ) {
 		} );
 
 		return markerPreviews;
+
+	}
+
+	function updateMarkerRuler() {
+
+		if ( editor.viewportMarkerRulerEnabled !== true ||
+			activeMarkerPreviewForRuler === null ||
+			activeMarkerPreviewForRuler.visible !== true ) {
+
+			markerRuler.visible = false;
+			return;
+
+		}
+
+		activeMarkerPreviewForRuler.updateWorldMatrix( true, false );
+		const markerGeometry = activeMarkerPreviewForRuler.geometry;
+		if ( markerGeometry.boundingBox === null ) markerGeometry.computeBoundingBox();
+
+		const markerWidth = markerGeometry.boundingBox.max.x - markerGeometry.boundingBox.min.x;
+		const markerHeight = markerGeometry.boundingBox.max.y - markerGeometry.boundingBox.min.y;
+
+		if ( ! Number.isFinite( markerWidth ) || markerWidth <= 0 ||
+			! Number.isFinite( markerHeight ) || markerHeight <= 0 ) {
+
+			throw new Error( 'Unable to align the marker ruler to a preview with no measurable width or height.' );
+
+		}
+
+		activeMarkerPreviewForRuler.matrixWorld.decompose( markerRuler.position, markerRuler.quaternion, markerRuler.scale );
+		// Keep both axes in marker-width units and align zero with the marker's lower-left corner.
+		const markerRulerOffsetY = ( markerWidth - markerHeight ) / 2;
+		markerRulerPosition.set( 0, markerRulerOffsetY, 0 ).applyMatrix4( activeMarkerPreviewForRuler.matrixWorld );
+		markerRuler.position.copy( markerRulerPosition );
+		markerRuler.scale.multiplyScalar( markerWidth );
+		markerRuler.updateMatrix();
+		updateMarkerRulerLabels( markerRuler, editor.viewportMarkerWidthCm );
+		markerRuler.visible = true;
 
 	}
 
@@ -167,6 +204,7 @@ function Viewport( editor ) {
 
 		applyingViewportMarkerPreview = true;
 		let visibilityChanged = false;
+		activeMarkerPreviewForRuler = null;
 
 		try {
 
@@ -201,6 +239,13 @@ function Viewport( editor ) {
 
 					markerPreview.visible = showMarkerPreview;
 					visibilityChanged = true;
+
+				}
+
+				if ( showMarkerPreview && markerPreview !== undefined &&
+					( markerSystem.id === 'qr' || markerSystem.id === 'ar' || markerSystem.id === 'nft' ) ) {
+
+					activeMarkerPreviewForRuler = markerPreview;
 
 				}
 
@@ -572,7 +617,6 @@ function Viewport( editor ) {
 		}
 
 		renderer = newRenderer;
-		rendererDefaultOutputEncoding = renderer.outputEncoding;
 		rendererDefaultOutputColorSpace = 'outputColorSpace' in renderer ? renderer.outputColorSpace : undefined;
 		rendererDefaultUseLegacyLights = 'useLegacyLights' in renderer ? renderer.useLegacyLights : undefined;
 
@@ -900,6 +944,8 @@ function Viewport( editor ) {
 
 	} );
 
+	signals.viewportMarkerRulerChanged.add( render );
+
 	signals.markerStateChanged.add( function ( markerSystemId ) {
 
 		if ( markerSystemId !== undefined ) {
@@ -1025,6 +1071,7 @@ function Viewport( editor ) {
 
 		startTime = performance.now();
 
+		updateMarkerRuler();
 		renderer.setViewport( 0, 0, container.dom.offsetWidth, container.dom.offsetHeight );
 		renderer.render( scene, editor.viewportCamera );
 

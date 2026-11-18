@@ -55,6 +55,26 @@
             });
         }
 
+        function scaleShadowCamerasForSceneScale(root, scale) {
+            root.traverse(function (object) {
+                const shadowCamera = object.shadow && object.shadow.camera;
+                if (object.castShadow !== true || !shadowCamera) return;
+
+                // Shadow cameras are not children of the scene, so the NFT unit scale does not affect their projection.
+                if (shadowCamera.isOrthographicCamera) {
+                    shadowCamera.left *= scale;
+                    shadowCamera.right *= scale;
+                    shadowCamera.top *= scale;
+                    shadowCamera.bottom *= scale;
+                }
+
+                shadowCamera.near *= scale;
+                shadowCamera.far *= scale;
+                object.shadow.normalBias *= scale;
+                shadowCamera.updateProjectionMatrix();
+            });
+        }
+
         const entities = [
             //ADD_MARKER_LOCATIONS_HERE
             //Markers should be added in this manner:s
@@ -89,8 +109,8 @@
                         "camera": {
                             "fov": fov,
                             "ratio": ratio,
-                            "near": 0.01,
-                            "far": 1000
+                            "near": /* NFT_CAMERA_NEAR */ 0.1,
+                            "far": /* NFT_CAMERA_FAR */ 1000
                         }
                     }
 

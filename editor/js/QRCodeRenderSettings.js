@@ -54,12 +54,12 @@ const QR_CODE_RENDER_SETTING_GROUPS = [
 				path: [ 'tracking', 'detectionConfidenceHoldMs' ],
 				label: 'Detection Hold (ms)',
 				type: 'number',
-				defaultValue: 300,
+				defaultValue: 1500,
 				min: 0,
 				max: 60000,
 				step: 10,
 				precision: 0,
-				info: 'Time the last good pose is retained across missed decode frames before the overlay is hidden.'
+				info: 'Time the last good pose is retained across missed decode frames before the overlay is hidden. Longer holds reduce flicker but can leave a stale pose visible.'
 			},
 			{
 				path: [ 'tracking', 'maxCameraSize' ],
@@ -138,23 +138,23 @@ const QR_CODE_RENDER_SETTING_GROUPS = [
 				path: [ 'render', 'model', 'modelUnitScale' ],
 				label: 'Model Unit Scale',
 				type: 'number',
-				defaultValue: 1000,
-				min: 0.0001,
-				max: 1000000,
-				step: 0.1,
-				precision: 4,
-				info: 'Conversion between authored model units and one QR-code width. Change this only when the model uses a different unit scale.'
-			},
-			{
-				path: [ 'render', 'model', 'scale' ],
-				label: 'Model Scale',
-				type: 'number',
 				defaultValue: 1,
 				min: 0.0001,
 				max: 1000000,
 				step: 0.1,
 				precision: 4,
-				info: 'Additional scale multiplier applied to the model after its unit conversion.'
+				info: 'Unit multiplier applied before Model Scale. Editor App JSON uses native scene units, so 1 preserves its authored units.'
+			},
+			{
+				path: [ 'render', 'model', 'scale' ],
+				label: 'Model Scale',
+				type: 'number',
+				defaultValue: 260.65,
+				min: 0.0001,
+				max: 1000000,
+				step: 0.1,
+				precision: 4,
+				info: 'For the supplied 7.673-unit-wide editor scene, 260.65 targets about one QR width before dynamic scaling. Reduce it if the model clips at close range.'
 			},
 			{
 				path: [ 'render', 'model', 'placement', 'mode' ],
@@ -168,9 +168,9 @@ const QR_CODE_RENDER_SETTING_GROUPS = [
 				path: [ 'render', 'model', 'placement', 'bboxZFace' ],
 				label: 'Bounding Box Z Face',
 				type: 'select',
-				defaultValue: 'max',
+				defaultValue: 'min',
 				options: { max: 'Max', min: 'Min' },
-				info: 'Chooses which Z face of the model bounds touches the QR marker plane in bounding-box placement modes.'
+				info: 'For editor App JSON and Y-up GLB models, Min anchors the base to the marker after axis correction. Choose Max for the opposite face or a reversed up axis.'
 			},
 			{
 				path: [ 'render', 'model', 'positionOffset', 'x' ],

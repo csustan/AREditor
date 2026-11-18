@@ -316,6 +316,52 @@ select {
 	bottom: 0;
 }
 
+	#viewport-marker-ruler-controls {
+		position: absolute;
+		z-index: 20;
+		top: 10px;
+		left: 252px;
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		box-sizing: border-box;
+		padding: 3px 7px;
+		border: 1px solid rgba(0, 0, 0, 0.2);
+		border-radius: 3px;
+		background: rgba(255, 255, 255, 0.92);
+		color: #333;
+		font: 12px Arial, sans-serif;
+		line-height: 20px;
+		white-space: nowrap;
+	}
+
+		#viewport-marker-ruler-controls label {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+		}
+
+		#viewport-marker-ruler-controls input[type="checkbox"] {
+			margin: 0;
+		}
+
+		#viewport-marker-ruler-controls input[type="number"] {
+			box-sizing: border-box;
+			width: 88px;
+			height: 22px;
+			padding: 2px 4px;
+			font-size: 12px;
+		}
+
+		#viewport-marker-ruler-controls .marker-width-clear {
+			box-sizing: border-box;
+			width: 22px;
+			height: 22px;
+			padding: 0;
+			font-size: 15px;
+			line-height: 20px;
+		}
+
 	#viewport #info {
 		text-shadow: 1px 1px 0 rgba(0,0,0,0.25);
 		pointer-events: none;
@@ -559,6 +605,11 @@ select {
 		top: 40px !important;
 	}
 
+	#viewport-marker-ruler-controls {
+		top: 70px;
+		left: 52px;
+	}
+
 }
 
 @media all and ( max-width: 600px ) {
@@ -602,6 +653,21 @@ select {
 		top: calc(100% - 320px);
 		bottom: 0;
 	}
+
+}
+
+@media all and ( max-width: 360px ) {
+
+	#viewport-marker-ruler-controls {
+		max-width: calc(100% - 62px);
+		flex-wrap: wrap;
+		gap: 4px;
+		padding: 3px 4px;
+	}
+
+		#viewport-marker-ruler-controls input[type="number"] {
+			width: 68px;
+		}
 
 }
 
@@ -664,6 +730,12 @@ select {
 
 	#sidebar {
 		background-color: #111;
+	}
+
+	#viewport-marker-ruler-controls {
+		border-color: #444;
+		background: rgba(34, 34, 34, 0.94);
+		color: #aaa;
 	}
 
 		#sidebar .Panel {

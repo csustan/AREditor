@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="A practical guide to building scenes, creating AR markers, and publishing AR apps with AREditor.">
+	<title>AREditor User Manual</title>
+	<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+	<a class="skip-link" href="#main-content">Skip to manual</a>
+
+	<header class="site-header">
+		<a class="brand" href="index.html" aria-label="AREditor home">
+			<span class="brand-mark" aria-hidden="true">AR</span>
+			<span class="brand-text">
+				<strong>AREditor</strong>
+				<small>USER MANUAL</small>
+			</span>
+		</a>
+		<nav class="site-links" aria-label="Site navigation">
+			<a href="index.html">Home</a>
+			<a class="button button-small" href="editor/">Open editor</a>
+			<button class="print-button" type="button" onclick="window.print()">Print / save PDF</button>
+		</nav>
+	</header>
+
+	<div class="manual-layout">
+		<aside class="contents">
+			<p class="eyebrow">Contents</p>
+			<nav aria-label="Manual contents">
+				<ol>
+					<li><a href="#quick-start">Quick start</a></li>
+					<li><a href="#interface">Editor interface</a></li>
+					<li><a href="#scene">Build a scene</a></li>
+					<li><a href="#ar-marker">AR Marker workflow</a></li>
+					<li><a href="#nft-marker">NFT Marker workflow</a></li>
+					<li><a href="#qr-code">QR Code workflow</a></li>
+					<li><a href="#preview-ruler">Preview and ruler</a></li>
+					<li><a href="#publishing">Publish and test</a></li>
+					<li><a href="#troubleshooting">Troubleshooting</a></li>
+				</ol>
+			</nav>
+			<a class="contents-home" href="index.html">Back to the AREditor home page</a>
+		</aside>
+
+		<main id="main-content">
+			<section class="hero" aria-labelledby="page-title">
+				<h1 id="page-title">AREditor user manual</h1>
+				<p class="hero-copy">AREditor is a browser-based 3D scene editor for preparing augmented reality content. This guide explains how to build a scene, create or select a target, configure tracking, and publish an app.</p>
+				<div class="hero-actions">
+					<a class="button" href="editor/">Open the AR Editor</a>
+					<a class="button button-secondary" href="#quick-start">Start with the quick guide</a>
+				</div>
+				<p class="hero-note">AREditor has separate publishing workflows for AR markers, NFT image targets, and QR codes. Use the workflow that matches the target you plan to print or display.</p>
+			</section>
+
+			<section id="quick-start" class="manual-section" aria-labelledby="quick-start-title">
+				<h2 id="quick-start-title">Quick start</h2>
+				<ol class="steps">
+					<li><strong>Open the editor.</strong> Use the button above or the AR Editor link on the home page.</li>
+					<li><strong>Prepare your scene.</strong> Start from the default template, import or add objects, and arrange them in the viewport.</li>
+					<li><strong>Choose a target type.</strong> Open <b>Marker Generator</b>, <b>NFT Marker Generator</b>, or <b>QR Code Generator</b> in the right sidebar.</li>
+					<li><strong>Set up and check the target.</strong> Generate or select the marker, then use the viewport preview to check how the scene sits against it.</li>
+					<li><strong>Publish and test.</strong> Use that target's publish button, download the ZIP, and test the app with the same marker or QR code.</li>
+				</ol>
+				<div class="callout callout-blue">
+					<strong>Camera access</strong>
+					<p>A published app needs camera permission. Serve it from <code>https://</code> or <code>localhost</code>; opening the exported page directly as a <code>file://</code> URL usually will not provide camera access.</p>
+				</div>
+				<p class="small-note">The home page also provides the built-in AR marker, NFT image, and QR code files as sample targets.</p>
+			</section>
+
+			<section id="interface" class="manual-section" aria-labelledby="interface-title">
+				<h2 id="interface-title">The editor interface</h2>
+				<p>The viewport is where you compose and inspect the 3D scene. The menus run across the top, transform tools sit at the left, and the task-specific panels are in the right sidebar.</p>
+				<figure class="screenshot">
+					<img src="img/editor-overview.png" alt="AREditor workspace showing the scene viewport, selected sample object, transform controls, and sidebar tabs." width="1280" height="900" loading="lazy" decoding="async">
+					<figcaption><span class="figure-label">Workspace</span> The viewport, toolbar, preview controls, and sidebar work together while you build and check a scene.</figcaption>
+				</figure>
+
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr><th scope="col">Area</th><th scope="col">What it is for</th></tr>
+						</thead>
+						<tbody>
+							<tr><th scope="row">Top menus</th><td>File, Edit, Add, Add Lighting, Play, Examples, View, and Help provide project, object, and editor commands. Use Help for the keyboard-shortcut reference.</td></tr>
+							<tr><th scope="row">Left toolbar</th><td>Select an object and use the move, rotate, or scale tool to adjust it in the viewport. The <b>W</b> control switches the transform space.</td></tr>
+							<tr><th scope="row">Viewport controls</th><td>Choose a camera view, shading mode, marker preview, and lighting preview. Drag in the viewport to orbit, pan, or zoom the scene.</td></tr>
+							<tr><th scope="row">Right sidebar</th><td><b>Scene</b> manages the scene and selected object; <b>Project</b> controls project and renderer options; <b>Settings</b> contains editor preferences; the three generator tabs prepare and publish targets.</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+
+			<section id="scene" class="manual-section" aria-labelledby="scene-title">
+				<h2 id="scene-title">Build and arrange a scene</h2>
+				<ol class="steps">
+					<li><strong>Start or import content.</strong> Use the File menu to create a template or import a model. The Add and Examples menus are also useful for adding objects.</li>
+					<li><strong>Select an object.</strong> Choose it in the Scene list or click it in the viewport. The Object, Geometry, and Material panels show its available properties.</li>
+					<li><strong>Position it.</strong> Use the move, rotate, and scale tools. Adjust the transform gizmo or the object's numeric properties for more precise placement.</li>
+					<li><strong>Set the scene appearance.</strong> The Scene panel includes background, environment, and fog controls. Add lights from the Add Lighting menu when the model needs them.</li>
+					<li><strong>Check project options.</strong> The Project panel contains the project title, editable and VR options, and renderer settings. Settings includes language, viewport preferences, shortcuts, and history.</li>
+				</ol>
+				<p class="small-note">Use the File menu's save and export commands to preserve your work or export a scene. Check the dialog for the format and options available in your current editor version.</p>
+			</section>
+
+			<section id="ar-marker" class="manual-section" aria-labelledby="ar-marker-title">
+				<h2 id="ar-marker-title">Create and publish an AR Marker app</h2>
+				<p>An AR marker uses a high-contrast pattern. The Marker Generator can make one from the scene background or use a chosen image as its source.</p>
+				<figure class="screenshot">
+					<img src="img/ar-marker-generator.png" alt="Marker Generator panel showing AR marker creation, download, print layout, and publishing controls." width="1280" height="900" loading="lazy" decoding="async">
+					<figcaption><span class="figure-label">Marker Generator</span> Create the pattern, download its files, choose a print layout, and configure the published app.</figcaption>
+				</figure>
+				<ol class="steps">
+					<li>Open <b>Marker Generator</b> in the sidebar and choose the scene or image source for the marker.</li>
+					<li>Adjust <b>Pattern Ratio</b> and <b>Image Size (px)</b> if needed. The marker image updates when the source or settings change; download the pattern and image together so they match.</li>
+					<li>Use <b>Download Marker (.patt)</b> for the tracking pattern and <b>Download Image</b> for the printable image. The PDF buttons prepare layouts with one, two, or six markers per page.</li>
+					<li>Use <b>Reset to Default Marker</b> to return to the built-in marker.</li>
+					<li>Set the app's camera and tracking options, then choose <b>Publish AR Marker App</b>. The app is packaged for download.</li>
+				</ol>
+				<div class="callout">
+					<strong>Print the matching marker</strong>
+					<p>Test the published app with the exact marker image used to create its pattern. Keep it flat and well lit; glare, blur, or changing the print can make detection unreliable.</p>
+				</div>
+			</section>
+
+			<section id="nft-marker" class="manual-section" aria-labelledby="nft-marker-title">
+				<h2 id="nft-marker-title">Use or create an NFT marker</h2>
+				<p>NFT tracking uses visual features in an image rather than the black-and-white pattern used by an AR marker.</p>
+				<figure class="screenshot">
+					<img src="img/nft-marker-generator.png" alt="NFT Marker Generator with the built-in default image selected as the Active NFT." width="1280" height="900" loading="lazy" decoding="async">
+					<figcaption><span class="figure-label">Active NFT</span> The active target is the one used by the viewport, downloads, and published app.</figcaption>
+				</figure>
+				<h3>Publish the active target</h3>
+				<ol class="steps">
+					<li>Open <b>NFT Marker Generator</b> and check the active marker shown in the panel. The built-in default is available immediately.</li>
+					<li>Use <b>Download the NFT Files</b> to download the active target's files, or <b>Reset to Default NFT Marker</b> to restore the built-in target.</li>
+					<li>Review the “Will publish” status at the top of the panel, adjust export options if needed, and choose <b>Publish App with Active NFT</b>.</li>
+				</ol>
+				<h3>Create a target from your own image</h3>
+				<figure class="screenshot">
+					<img src="img/nft-create.png" alt="Create NFT panel with an image file picker, output filename, and advanced generation settings." width="1280" height="900" loading="lazy" decoding="async">
+					<figcaption><span class="figure-label">Create NFT</span> Select an image and filename, then review the optional generation settings.</figcaption>
+				</figure>
+				<ol class="steps">
+					<li>Open the <b>Create NFT</b> sub-tab and choose an image file.</li>
+					<li>Set the output filename and expand <b>Advanced Generation Settings</b> only if you need to change the defaults.</li>
+					<li>Choose <b>Generate NFT Marker</b> and wait for generation to finish. A new target becomes active only after successful generation; an unfinished or failed generation does not replace the current active target.</li>
+					<li>Return to <b>Active NFT</b>, confirm the target you want to use, then download its files or publish the app.</li>
+				</ol>
+				<p class="small-note">Images with clear detail and distinct features generally make better tracking targets than plain, repetitive, reflective, or blurry images.</p>
+			</section>
+
+			<section id="qr-code" class="manual-section" aria-labelledby="qr-code-title">
+				<h2 id="qr-code-title">Generate and publish a QR Code app</h2>
+				<p>The QR Code Generator creates a QR image and configures the tracker that detects it. The generated code's content and printed image must match what the published app expects.</p>
+				<figure class="screenshot">
+					<img src="img/qr-code-generator.png" alt="QR Code Generator panel showing QR image options, generation controls, and expandable tracker settings." width="1280" height="900" loading="lazy" decoding="async">
+					<figcaption><span class="figure-label">QR Code Generator</span> Configure the code, generate the image, and expand tracker settings only when you need them.</figcaption>
+				</figure>
+				<ol class="steps">
+					<li>Enter the text or URL to encode in <b>QR Code Content</b>.</li>
+					<li>Set the image size, foreground and background colors, error-correction level, and quiet zone. A quiet zone of four modules and strong contrast are good starting points.</li>
+					<li>Optionally choose a local PNG, JPEG, or WebP logo. A logo covers part of the code, so use a modest size and consider a higher error-correction level.</li>
+					<li>Choose <b>Generate QR Code</b>. Changes to the content and image settings are not applied until you generate again. Download the resulting QR image and print it clearly.</li>
+					<li>Enable <b>Include marker in Published QR App</b> if the published ZIP should include the last successfully generated QR image. Regenerate after changing the code so the bundled image is current.</li>
+					<li>Enable <b>Track specific QR Code</b> if the app should respond only to the exact content entered, then choose <b>Publish QR Code Tracker App</b>.</li>
+				</ol>
+				<h3>QR tracker settings</h3>
+				<p>The expandable groups let you tune the tracker and the model it displays. Defaults are suitable for many projects; change a value when you have a specific reason and test the published result.</p>
+				<ul class="feature-list">
+					<li><b>Tracking</b> — QR size hint, lost grace period, scan and pose intervals, detection hold, and maximum camera size.</li>
+					<li><b>Camera</b> — camera and projection properties, including near and far clipping planes.</li>
+					<li><b>Model</b> and <b>Visibility and Scale</b> — how the model is selected, positioned, shown, and scaled relative to the QR target.</li>
+					<li><b>Material and Cube</b>, <b>Lighting and Text</b>, and <b>Pose</b> — options for the rendered model and its tracked pose.</li>
+					<li><b>Size-Based Scaling</b>, <b>Pose Smoothing</b>, and <b>Performance Fallback</b> — optional behavior for adapting scale, reducing jitter, or handling slower devices.</li>
+				</ul>
+			</section>
+
+			<section id="preview-ruler" class="manual-section" aria-labelledby="preview-ruler-title">
+				<h2 id="preview-ruler-title">Marker preview and ruler</h2>
+				<p>Use the <b>Marker Preview</b> control above the viewport to choose AR Marker, NFT Marker, or QR Marker preview. A preview helps you check the scene's placement against its target; it is not a substitute for testing the published app with a camera.</p>
+				<figure class="screenshot">
+					<img src="img/marker-preview-ruler.png" alt="AR marker preview with the marker ruler enabled, showing red X, blue Z, and green Y axes." width="1280" height="900" loading="lazy" decoding="async">
+					<figcaption><span class="figure-label">AR marker preview</span> The ruler controls appear for AR and NFT previews and use marker-width units.</figcaption>
+				</figure>
+				<ul class="feature-list">
+					<li>The ruler is available when the preview is set to <b>AR Marker</b> or <b>NFT Marker</b>. It is hidden for other preview types.</li>
+					<li>Turn on <b>Ruler</b> to show it. The red X and blue Z axes extend in both positive and negative directions; the green Y axis extends in the positive direction.</li>
+					<li>Tick labels use marker-width units. Enter the printed marker width in centimeters to add centimeter labels. Clear the width or set it to zero to hide those labels.</li>
+					<li>The ruler is an editor-only measuring aid. It is not included in the published app.</li>
+				</ul>
+			</section>
+
+			<section id="publishing" class="manual-section" aria-labelledby="publishing-title">
+				<h2 id="publishing-title">Publish and test your app</h2>
+				<ol class="steps">
+					<li>Open the publisher that matches your target and verify its marker or QR content before exporting.</li>
+					<li>Adjust camera settings for that publisher if necessary. Near and far values are configured separately for AR Marker, NFT, and QR apps; changing one publisher's settings does not change the others.</li>
+					<li>Keep the camera near plane above zero and below the far plane. Increase the far plane if distant content is clipped; lower the near plane if close content disappears.</li>
+					<li>Use the publisher's button to download the app ZIP. Extract it and serve the included page from a web server with camera access enabled.</li>
+					<li>Open the page in a supported browser, allow camera permission, and test it using the same physical marker or QR image you prepared.</li>
+				</ol>
+				<div class="callout callout-blue">
+					<strong>Camera near and far are per app</strong>
+					<p>The AR Marker publisher labels these <b>Camera Near</b> and <b>Camera Far</b>; NFT uses <b>Projection Near</b> and <b>Projection Far</b>; QR has its own near and far values in the <b>Camera</b> settings group. Use the controls in the publisher you are exporting from.</p>
+				</div>
+			</section>
+
+			<section id="troubleshooting" class="manual-section" aria-labelledby="troubleshooting-title">
+				<h2 id="troubleshooting-title">Troubleshooting</h2>
+				<div class="troubleshooting-list">
+					<details>
+						<summary>The camera does not start</summary>
+						<p>Open the published app from HTTPS or localhost, grant camera permission in the browser, and make sure another application is not using the camera.</p>
+					</details>
+					<details>
+						<summary>The AR marker is not detected</summary>
+						<p>Use the matching downloaded pattern and image, print at a clear resolution, keep the marker flat, and avoid glare or low light. If you changed the source image, generate and download the marker again.</p>
+					</details>
+					<details>
+						<summary>The NFT target is not detected</summary>
+						<p>Check that the intended target is shown as the Active NFT and is the one printed. Use a sharp, detailed image with distinct features and test it in even lighting.</p>
+					</details>
+					<details>
+						<summary>The QR app sees a different code or no code</summary>
+						<p>Confirm the printed QR content matches the generator. If <b>Track specific QR Code</b> is enabled, it must match exactly. Regenerate after changing code settings, keep strong contrast and a quiet zone, and avoid covering too much of the code with a logo.</p>
+					</details>
+					<details>
+						<summary>Objects disappear or are clipped</summary>
+						<p>Check the object's scale and position, then adjust near and far in the camera settings for the publisher you are using. The far value must be greater than the near value.</p>
+					</details>
+					<details>
+						<summary>My QR image does not reflect the latest settings</summary>
+						<p>QR content and image settings are applied when you press <b>Generate QR Code</b>. Generate again before downloading the image or publishing with the marker included.</p>
+					</details>
+				</div>
+			</section>
+
+			<footer class="manual-footer">
+				<p>Ready to make something? <a href="editor/">Open the AR Editor</a> or return to the <a href="index.html">AREditor home page</a>.</p>
+				<a class="back-to-top" href="#main-content">Back to top</a>
+			</footer>
+		</main>
+	</div>
+</body>
+</html>

@@ -42,6 +42,7 @@ let fullMarkerURL = null;
 let imageName = null;
 let selectedColor = 'black';
 const defaultMarkerURL = 'files/LargeLambdaSymbol.png'; //Test Code
+const defaultMarkerPreviewURL = 'files/markerForScale.png';
 //const defaultMarkerURL = generateFallbackRedSwatch(); //Utlize the default
 
 // Defaults match Menubar.File.js and the exported APP.js template.
@@ -398,12 +399,14 @@ function SidebarMarkerGenerator(editor) {
   fileSection.add(imageLabel);
 
   const previewImage = document.createElement('img');
+  previewImage.src = defaultMarkerPreviewURL;
   previewImage.style.maxWidth = '100%';
-  previewImage.style.display = 'none';
+  previewImage.style.display = 'block';
   previewImage.style.marginBottom = '8px';
   previewImage.style.border = '1px solid #444';
   fileSection.dom.appendChild(previewImage);
   window._markerPreviewImage = previewImage;
+ //previewImage.style.display = 'none';
 
   const chooseFileRow = new UIRow();
   chooseFileRow.dom.style.display = 'flex';
